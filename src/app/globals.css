@@ -6,6 +6,8 @@
   --color-primary-600: #197fb0;
   --color-primary-700: #16668e;
 
+  --color-on-primary: #111717;
+
   --color-background: #eeeae0;
   --color-dark: #0e1312;
 
@@ -56,4 +58,19 @@ body {
   background: var(--color-background);
   color: var(--color-text);
   font-family: var(--font-almarai), sans-serif;
+}
+
+/*
+ * Navbar shell: the shape morph (scroll) is slow and smooth, while the
+ * hover background responds quickly. Per-property durations aren't
+ * expressible with Tailwind utilities, hence this small rule.
+ */
+.nav-shell {
+  transition:
+    height 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 400ms cubic-bezier(0.22, 1, 0.36, 1);
 }
