@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Brand colours */
+  --color-primary: #34a8d8;
+  --color-primary-600: #197fb0;
+  --color-primary-700: #16668e;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-on-primary: #111717;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-background: #eeeae0;
+  --color-dark: #0e1312;
+
+  --color-negative: #cc3931;
+  --color-notice: #ffab00;
+  --color-success: #2e9e5b;
+  --color-informative: #0072da;
+
+  --color-text: #191919;
+  --color-subtext: #6e6e6e;
+  --color-light: #8d8d8d;
+  --color-muted: #b7b7b7;
+
+  --color-text-dark: #f7f8f7;
+  --color-subtext-dark: #b1b4b1;
+  --color-light-dark: #8a8f8a;
+  --color-muted-dark: #585b58;
+
+  /* Fonts */
+  --font-sans: var(--font-almarai);
+  --font-heading: var(--font-rubbama);
+
+  /* Typography scale */
+  --text-heading: 56px;
+  --text-heading--line-height: 78px;
+  --text-h1: 48px;
+  --text-h1--line-height: 67px;
+  --text-h2: 40px;
+  --text-h2--line-height: 56px;
+  --text-h3: 32px;
+  --text-h3--line-height: 45px;
+  --text-t1: 24px;
+  --text-t1--line-height: 27px;
+  --text-t2: 20px;
+  --text-t2--line-height: 22px;
+  --text-t3: 18px;
+  --text-t3--line-height: 20px;
+  --text-t4: 16px;
+  --text-t4--line-height: 18px;
+  --text-t5: 14px;
+  --text-t5--line-height: 16px;
+
+  /* Fixed brand radius */
+  --radius-brand: 32px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-almarai), sans-serif;
+}
+
+/*
+ * Navbar shell: the shape morph (scroll) is slow and smooth, while the
+ * hover background responds quickly. Per-property durations aren't
+ * expressible with Tailwind utilities, hence this small rule.
+ */
+.nav-shell {
+  transition:
+    height 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 400ms cubic-bezier(0.22, 1, 0.36, 1);
 }
