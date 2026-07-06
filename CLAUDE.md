@@ -26,6 +26,9 @@
 - Run lint after modifications.
 - Fix TypeScript errors before finishing.
 
+## Language :
+- the language of the website is arabic only, RTL.
+
 ## Design Rules :
 
 # guidlines : 
@@ -35,6 +38,7 @@
 - No Border.
 - light shadow only.
 - 32px fixed border radius
+- Focus on Desktop only for now, not responsive
 
 
 # Colours :
