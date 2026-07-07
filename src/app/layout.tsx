@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Almarai } from "next/font/google";
 import localFont from "next/font/local";
+import "lenis/dist/lenis.css";
 import "./globals.css";
+import SmoothScroll from "./components/SmoothScroll/SmoothScroll";
 
 const almarai = Almarai({
   variable: "--font-almarai",
@@ -31,7 +33,9 @@ export default function RootLayout({
       dir="rtl"
       className={`${almarai.variable} ${rubbama.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <SmoothScroll>{children}</SmoothScroll>
+      </body>
     </html>
   );
 }
