@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Blueprint from "./Blueprint";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -66,7 +67,10 @@ export default function Solution() {
       id="solution"
       className="relative h-screen w-full overflow-hidden bg-background"
     >
-      {/* Frame stack — each fills the whole section */}
+      {/* Animated construction blueprint behind everything */}
+      <Blueprint />
+
+      {/* Frame stack — centered block of street */}
       {FRAMES.map((src, i) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -77,7 +81,7 @@ export default function Solution() {
           src={src}
           alt=""
           aria-hidden="true"
-          className="absolute left-1/2 top-1/2 h-auto w-[55%] max-w-225 -translate-x-1/2 -translate-y-1/2"
+          className="absolute left-1/2 top-1/2 z-1 h-auto w-[64%] max-w-250 -translate-x-1/2 -translate-y-1/2"
         />
       ))}
 
