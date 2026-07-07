@@ -100,9 +100,8 @@ export default function Problem() {
                   src={problem.image}
                   alt=""
                   aria-hidden="true"
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
-                    index === active ? "opacity-100" : "opacity-0"
-                  }`}
+                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${index === active ? "opacity-100" : "opacity-0"
+                    }`}
                 />
               ))}
             </div>
