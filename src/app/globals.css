@@ -115,3 +115,23 @@ body {
 .problem-reveal {
   will-change: clip-path;
 }
+
+/*
+ * Workflow section: the travelling marker's outer ring pulses outward and
+ * fades, like a live-tracking ping. Animating the SVG `r` attribute; the
+ * marker's position/rotation is handled separately by GSAP MotionPath.
+ */
+@keyframes wf-ring {
+  0% {
+    r: 16px;
+    opacity: 0.6;
+  }
+  100% {
+    r: 34px;
+    opacity: 0;
+  }
+}
+
+.wf-ring {
+  animation: wf-ring 1.8s ease-out infinite;
+}
