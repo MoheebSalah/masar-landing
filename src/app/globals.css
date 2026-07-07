@@ -76,6 +76,36 @@ body {
 }
 
 /*
+ * Blueprint background (Solution section): each stroke has pathLength=1, so a
+ * dasharray/offset of 1 spans the whole path. The line draws itself in, holds,
+ * then wipes off the far end — looping forever. Per-element delays live on the
+ * elements as utilities.
+ */
+@keyframes bp-draw {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  45% {
+    stroke-dashoffset: 0;
+  }
+  65% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1;
+  }
+}
+
+.bp-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  /* Longhand (not the shorthand) so it doesn't reset the per-line
+     animation-delay utilities set on each element. */
+  animation-name: bp-draw;
+  animation-duration: 7s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+ /*
  * Problem section reveal: a "window" that grows on scroll to expose the light
  * content over a dark stage. The clip-path itself is set imperatively from JS
  * (lightningcss can't parse an inset() shape built from CSS variables and drops
