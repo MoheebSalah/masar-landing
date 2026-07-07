@@ -2,6 +2,7 @@ import Navbar from "./components/Navbar/Navbar";
 import Hero from "./components/Hero/Hero";
 import Problem from "./components/Problem/Problem";
 import Solution from "./components/Solution/Solution";
+import Bento from "./components/Bento/Bento";
 
 export default function Home() {
   return (
@@ -10,6 +11,7 @@ export default function Home() {
       <Hero />
       <Problem />
       <Solution />
+      <Bento />
     </main>
   );
 }
