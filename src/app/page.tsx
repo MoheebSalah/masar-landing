@@ -4,6 +4,7 @@ import Problem from "./components/Problem/Problem";
 import Solution from "./components/Solution/Solution";
 import Workflow from "./components/Workflow/Workflow";
 import Bento from "./components/Bento/Bento";
+import SeeInAction from "./components/SeeInAction/SeeInAction";
 
 export default function Home() {
   return (
@@ -14,6 +15,7 @@ export default function Home() {
       <Solution />
       <Workflow />
       <Bento />
+      <SeeInAction />
     </main>
   );
 }
