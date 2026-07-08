@@ -12,7 +12,7 @@ const PROBLEMS = [
   {
     word: "الخطورة",
     sentence: "درجة خطورة الحفرة غير معروفة",
-    image: "/assets/Problems/Problem 1.png",
+    image: "/assets/Problems/Problem 2.png",
   },
   {
     word: "المتابعة",
