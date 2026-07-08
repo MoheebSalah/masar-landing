@@ -6,25 +6,57 @@ import ProblemPoint from "./ProblemPoint";
 const PROBLEMS = [
   {
     word: "التنظيم",
-    sentence: "البلاغات غير مرتبة، اتصالات، أوراق ورسائل واتساب",
+    sentence: "البلاغات غير مرتبة، اتصالات، أوراق ورسائل واتساب — تتوزّع على قنوات متفرقة ولا تجتمع في مكان واحد، فتضيع بين الموظفين ولا يصل أغلبها إلى الجهة المسؤولة عن الإصلاح.",
     image: "/assets/Problems/Problem 1.png",
   },
   {
     word: "الخطورة",
-    sentence: "درجة خطورة الحفرة غير معروفة",
+    sentence: "درجة خطورة الحفرة غير معروفة — لا توجد طريقة واضحة لمعرفة أيّ الحفر تشكّل خطرًا فعليًا على السائقين والمشاة، فتُعامَل كل البلاغات بالطريقة نفسها، ويتأخر إصلاح الأخطر منها.",
     image: "/assets/Problems/Problem 2.png",
   },
   {
     word: "المتابعة",
-    sentence: "متابعة عملية سد الحفرة غير مستقرة",
-    image: "/assets/Problems/Problem 1.png",
+    sentence: "متابعة عملية سد الحفرة غير مستقرة — بعد إرسال البلاغ، لا يُعرف أين وصلت المعالجة ولا متى ستُصلَح، ولا يوجد ما يثبت أن الإصلاح تمّ فعلًا بعد انتهاء العمل.",
+    image: "/assets/Problems/Problem 3.png",
   },
 ];
+
+// Fraction of the pinned scroll spent opening the reveal window before the
+// point selection begins — keep in sync with the reveal math below so a
+// selected point always lands on a fully-open (fully-scaled) section.
+const REVEAL_END = 0.3;
+
+// Scroll progress that centres a given point within the post-reveal range.
+const progressForPoint = (index: number) =>
+  REVEAL_END + ((index + 0.5) / PROBLEMS.length) * (1 - REVEAL_END);
 
 export default function Problem() {
   const sectionRef = useRef<HTMLElement>(null);
   const revealRef = useRef<HTMLDivElement>(null);
+  const lockRef = useRef(false);
+  const lockTimer = useRef<number>(0);
   const [active, setActive] = useState(0);
+  const [imageVisible, setImageVisible] = useState(false);
+
+  // Scroll the page to the position that maps to a given point, so clicking a
+  // point stays in sync with the scroll-driven selection. While the smooth
+  // scroll runs we lock out scroll-driven updates so the selection jumps
+  // straight to the target instead of flickering through each segment.
+  const goToPoint = (index: number) => {
+    const section = sectionRef.current;
+    if (!section) return;
+    const scrollable = section.offsetHeight - window.innerHeight;
+    lockRef.current = true;
+    window.clearTimeout(lockTimer.current);
+    lockTimer.current = window.setTimeout(() => {
+      lockRef.current = false;
+    }, 800);
+    setActive(index);
+    window.scrollTo({
+      top: section.offsetTop + progressForPoint(index) * scrollable,
+      behavior: "smooth",
+    });
+  };
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -52,18 +84,50 @@ export default function Problem() {
       const r = lerp(40, 0, wp);
       // Set directly (not via a CSS class) so the browser parses the shape.
       reveal.style.clipPath = `inset(${y}% ${x}% round ${r}px)`;
+
+      // Drive the active point from how far we've scrolled through the pinned
+      // section — but only after the reveal has finished opening, and never
+      // while a click-driven smooth scroll is in progress.
+      if (!lockRef.current) {
+        const scrollable = section.offsetHeight - vh;
+        const progress = clamp(-top / scrollable, 0, 1);
+        const p = clamp((progress - REVEAL_END) / (1 - REVEAL_END), 0, 1);
+        const index = clamp(
+          Math.floor(p * PROBLEMS.length),
+          0,
+          PROBLEMS.length - 1
+        );
+        setActive(index);
+      }
     };
 
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
 
+    // Release the click lock as soon as the smooth scroll settles.
+    const onScrollEnd = () => {
+      lockRef.current = false;
+    };
+
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scrollend", onScrollEnd);
     window.addEventListener("resize", onScroll);
+
+    // Reveal the image with an entrance animation once the section is in view.
+    const observer = new IntersectionObserver(
+      ([entry]) => setImageVisible(entry.isIntersecting),
+      { threshold: 0.25 }
+    );
+    observer.observe(section);
+
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scrollend", onScrollEnd);
       window.removeEventListener("resize", onScroll);
+      observer.disconnect();
+      window.clearTimeout(lockTimer.current);
       if (frame) cancelAnimationFrame(frame);
     };
   }, []);
@@ -86,13 +150,18 @@ export default function Problem() {
                   word={problem.word}
                   sentence={problem.sentence}
                   active={index === active}
-                  onSelect={() => setActive(index)}
+                  onSelect={() => goToPoint(index)}
                 />
               ))}
             </div>
 
             {/* Left — image of the selected problem */}
-            <div className="relative aspect-square w-full overflow-hidden rounded-brand">
+            <div
+              className={`relative aspect-3/2 w-full self-center overflow-hidden rounded-brand transition-all duration-700 ease-out ${imageVisible
+                ? "translate-y-0 scale-100 opacity-100"
+                : "translate-y-8 scale-95 opacity-0"
+                }`}
+            >
               {PROBLEMS.map((problem, index) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
