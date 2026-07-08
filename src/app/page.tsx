@@ -6,6 +6,7 @@ import Solution from "./components/Solution/Solution";
 import Workflow from "./components/Workflow/Workflow";
 import Bento from "./components/Bento/Bento";
 import SeeInAction from "./components/SeeInAction/SeeInAction";
+import PhoneShowcase from "./components/PhoneShowcase/PhoneShowcase";
 import Impact from "./components/Impact/Impact";
 
 export default function Home() {
@@ -19,6 +20,7 @@ export default function Home() {
       <Workflow />
       <Bento />
       <SeeInAction />
+      <PhoneShowcase />
       <Impact />
     </main>
   );
