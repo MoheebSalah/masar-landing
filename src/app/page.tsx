@@ -23,5 +23,22 @@ export default function Home() {
       </main>
       <Footer />
     </>
+import PhoneShowcase from "./components/PhoneShowcase/PhoneShowcase";
+import Impact from "./components/Impact/Impact";
+
+export default function Home() {
+  return (
+    <main>
+      <Loader />
+      <Navbar />
+      <Hero />
+      <Problem />
+      <Solution />
+      <Workflow />
+      <Bento />
+      <SeeInAction />
+      <PhoneShowcase />
+      <Impact />
+    </main>
   );
 }
