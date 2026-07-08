@@ -15,9 +15,9 @@ export default function Bento() {
       className="w-full bg-background px-8 py-16 md:px-16 lg:px-32"
     >
       {/* Section heading */}
-      <div className="mb-10 text-right">
-        <h2 className="font-heading text-h2 text-text">القدرات الأساسية</h2>
-        <p className="mt-4 max-w-xl font-sans text-t2 text-subtext">
+      <div className="mb-10 text-center">
+        <h2 className="font-heading text-heading text-text">القدرات الأساسية</h2>
+        <p className="mx-auto mt-4 max-w-xl font-sans text-t2 text-subtext">
           منظومة متكاملة ترصد أضرار الطرق وتُحوّلها إلى إجراء واضح.
         </p>
       </div>
@@ -41,6 +41,7 @@ export default function Bento() {
         {/* 2 — Location & severity */}
         <TextCard
           title="تحديد الموقع والخطورة"
+          description="يحدّد مسار موقع كل حفرة بدقة على الخريطة ويقدّر درجة خطورتها فور رصدها."
           icon={<LocationIcon className="h-8 w-8" />}
           className="col-span-4 col-start-1 row-start-1"
         />
@@ -48,6 +49,7 @@ export default function Bento() {
         {/* 3 — Citizen notification */}
         <TextCard
           title="المواطن يتلقى إشعاراً"
+          description="يصل المواطن إشعارٌ فوري بحالة بلاغه وبكل تحديث حتى اكتمال الإصلاح."
           icon={<BellIcon className="h-8 w-8" />}
           className="col-span-4 col-start-1 row-start-2"
         />
@@ -55,6 +57,7 @@ export default function Bento() {
         {/* 4 — Multi-device (primary) */}
         <TextCard
           title="تعدد الأجهزة"
+          description="يعمل مسار على مختلف الأجهزة من الجوّال إلى لوحة التحكم بتجربةٍ موحّدة."
           icon={<DevicesIcon className="h-8 w-8" />}
           primary
           className="col-span-6 col-start-7 row-start-3"
