@@ -135,3 +135,61 @@ body {
 .wf-ring {
   animation: wf-ring 1.8s ease-out infinite;
 }
+
+/*
+ * Logo hover animation (Navbar + Footer): on hover the mark re-assembles — the
+ * centre arrow rises from below first, then the two outer arrows pop in. Each
+ * path is transformed about its own box so the translate/scale read locally.
+ */
+.logo-anim path {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes logo-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(55%);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-16%);
+  }
+  75% {
+    transform: translateY(7%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes logo-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(35%) scale(0.8);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-14%) scale(1.06);
+  }
+  75% {
+    transform: translateY(6%) scale(0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.logo-anim:hover .logo-mid {
+  animation: logo-rise 0.5s ease-out both;
+}
+
+.logo-anim:hover .logo-left {
+  animation: logo-pop 0.45s ease-out both;
+  animation-delay: 0.35s;
+}
+
+.logo-anim:hover .logo-right {
+  animation: logo-pop 0.45s ease-out both;
+  animation-delay: 0.55s;
+}
