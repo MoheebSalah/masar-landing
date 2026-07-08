@@ -20,6 +20,11 @@ const VIDEOS = [
 const SWIPE_THRESHOLD = 0.15;
 // Pointer travel below this (px) still counts as a click, not a drag.
 const CLICK_TOLERANCE = 6;
+// Side strips (fraction of the width) where a click pages through the clips
+// instead of toggling playback: right edge → next, left edge → previous.
+const EDGE_ZONE = 0.15;
+
+type CursorZone = "prev" | "center" | "next";
 
 export default function SeeInAction() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -39,20 +44,20 @@ export default function SeeInAction() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [cursorShown, setCursorShown] = useState(false);
+  const [cursorZone, setCursorZone] = useState<CursorZone>("center");
 
   useEffect(() => {
     const section = sectionRef.current;
     const frame = frameRef.current;
+    const viewport = viewportRef.current;
     const cursor = cursorRef.current;
-    if (!section || !frame || !cursor) return;
+    if (!section || !frame || !viewport || !cursor) return;
 
     const ctx = gsap.context(() => {
       // The clip starts inset by the hero headline's side gap (px-32 on the
-      // frame) and grows to full-bleed as the section scrolls up the screen.
-      gsap.to(frame, {
-        paddingLeft: 0,
-        paddingRight: 0,
-        ease: "none",
+      // frame) and grows to full-bleed as the section scrolls up the screen;
+      // the corners flatten in step so the fullscreen state has no radius.
+      const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
           start: "top 85%",
@@ -60,6 +65,8 @@ export default function SeeInAction() {
           scrub: 1,
         },
       });
+      tl.to(frame, { paddingLeft: 0, paddingRight: 0, ease: "none" }, 0);
+      tl.to(viewport, { borderRadius: 0, ease: "none" }, 0);
     }, section);
 
     cursorTo.current = {
@@ -113,12 +120,25 @@ export default function SeeInAction() {
     }
   };
 
+  // Which strip of the video the pointer sits in (the viewport is ltr, so
+  // the right strip means "next" and the left strip means "previous").
+  const zoneAt = (clientX: number): CursorZone => {
+    const viewport = viewportRef.current;
+    if (!viewport) return "center";
+    const rect = viewport.getBoundingClientRect();
+    const ratio = (clientX - rect.left) / rect.width;
+    if (ratio > 1 - EDGE_ZONE) return "next";
+    if (ratio < EDGE_ZONE) return "prev";
+    return "center";
+  };
+
   const moveCursor = (e: React.PointerEvent) => {
     const viewport = viewportRef.current;
     if (!viewport || !cursorTo.current) return;
     const rect = viewport.getBoundingClientRect();
     cursorTo.current.x(e.clientX - rect.left);
     cursorTo.current.y(e.clientY - rect.top);
+    setCursorZone(zoneAt(e.clientX));
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -145,13 +165,17 @@ export default function SeeInAction() {
     gsap.set(trackRef.current, { x: atEdge ? drag.dx * 0.3 : drag.dx });
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag.down) return;
     drag.down = false;
-    // A still click toggles playback; a real drag picks the nearest clip.
+    // A still click pages through the clips from the side strips and toggles
+    // playback from the middle; a real drag picks the nearest clip instead.
     if (!drag.dragging) {
-      togglePlay();
+      const zone = zoneAt(e.clientX);
+      if (zone === "next") goTo(indexRef.current + 1);
+      else if (zone === "prev") goTo(indexRef.current - 1);
+      else togglePlay();
       return;
     }
     const width = viewportRef.current?.offsetWidth ?? 1;
@@ -179,7 +203,7 @@ export default function SeeInAction() {
         <div
           ref={viewportRef}
           dir="ltr"
-          className="relative aspect-video w-full cursor-none touch-pan-y select-none overflow-hidden rounded-brand shadow-[0_24px_48px_-32px_rgba(14,19,18,0.35)]"
+          className="relative h-screen w-full cursor-none touch-pan-y select-none overflow-hidden rounded-brand shadow-[0_24px_48px_-32px_rgba(14,19,18,0.35)]"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -204,36 +228,75 @@ export default function SeeInAction() {
             ))}
           </div>
 
-          {/* Custom cursor: play when the clip is paused, pause when playing.
-              Tailwind's translate centres it on the point; GSAP moves x/y. */}
+          {/* Custom cursor: "Next"/"Prev" over the side strips, otherwise the
+              play/pause icon for the middle. GSAP moves the (zero-sized)
+              anchor; all variants stay mounted, stacked on its centre, and
+              cross-fade/scale so switching never looks instant. */}
           <div
             ref={cursorRef}
-            className={`pointer-events-none absolute left-0 top-0 z-10 -translate-x-1/2 -translate-y-1/2 text-primary transition-opacity duration-200 ${
+            className={`pointer-events-none absolute left-0 top-0 z-10 text-primary transition-opacity duration-200 ${
               cursorShown ? "opacity-100" : "opacity-0"
             }`}
           >
-            {isPlaying ? (
-              <PauseIcon className="h-14 w-14 drop-shadow-[0_4px_14px_rgba(14,19,18,0.35)]" />
-            ) : (
-              <PlayIcon className="h-14 w-14 drop-shadow-[0_4px_14px_rgba(14,19,18,0.35)]" />
-            )}
+            <PlayIcon
+              className={`absolute left-0 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
+                cursorZone === "center" && !isPlaying
+                  ? "scale-100 opacity-100"
+                  : "scale-50 opacity-0"
+              }`}
+            />
+            <PauseIcon
+              className={`absolute left-0 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
+                cursorZone === "center" && isPlaying
+                  ? "scale-100 opacity-100"
+                  : "scale-50 opacity-0"
+              }`}
+            />
+            <span
+              className={`absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-sans text-h2 font-bold transition-all duration-300 ease-out ${
+                cursorZone === "next"
+                  ? "scale-100 opacity-100"
+                  : "scale-50 opacity-0"
+              }`}
+            >
+              Next
+            </span>
+            <span
+              className={`absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-sans text-h2 font-bold transition-all duration-300 ease-out ${
+                cursorZone === "prev"
+                  ? "scale-100 opacity-100"
+                  : "scale-50 opacity-0"
+              }`}
+            >
+              Prev
+            </span>
+          </div>
+
+          {/* Indicator — inside the frame; inherits the viewport's ltr so the
+              active dot travels in the same direction as the slides. It swaps
+              the custom play cursor for the normal pointer and swallows
+              pointerdown so clicking a dot never drags or toggles playback. */}
+          <div
+            className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-3"
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerEnter={() => setCursorShown(false)}
+            onPointerLeave={() => setCursorShown(true)}
+          >
+            {VIDEOS.map((src, i) => (
+              <button
+                key={src}
+                type="button"
+                aria-label={`المقطع ${i + 1}`}
+                onClick={() => goTo(i)}
+                className={`h-2.5 cursor-pointer rounded-full transition-all duration-300 ${
+                  i === activeIndex
+                    ? "w-9 bg-primary"
+                    : "w-2.5 bg-text-dark/50 hover:bg-text-dark/80"
+                }`}
+              />
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* Indicator — the second way to navigate between clips */}
-      <div className="mt-8 flex justify-center gap-3">
-        {VIDEOS.map((src, i) => (
-          <button
-            key={src}
-            type="button"
-            aria-label={`المقطع ${i + 1}`}
-            onClick={() => goTo(i)}
-            className={`h-2.5 cursor-pointer rounded-full transition-all duration-300 ${
-              i === activeIndex ? "w-9 bg-primary" : "w-2.5 bg-muted hover:bg-light"
-            }`}
-          />
-        ))}
       </div>
     </section>
   );
