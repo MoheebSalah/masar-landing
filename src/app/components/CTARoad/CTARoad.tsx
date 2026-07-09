@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -8,12 +8,21 @@ gsap.registerPlugin(ScrollTrigger);
 
 // One road, drawn right-to-left (reading direction): it starts where damage
 // is detected, passes the repair and the proof — the platform's three
-// statuses — and ends at the demo button, the destination of the whole page.
+// statuses — and stops just short of the demo button, which sits ahead of it
+// as the destination of the whole page.
 const ROAD_PATH =
-  "M 1180 180 C 1010 180 970 96 810 96 C 650 96 640 180 470 180 C 360 180 300 180 170 180";
+  "M 1180 180 C 1010 180 970 96 810 96 C 650 96 640 180 470 180 C 400 180 340 180 280 180";
 
 export default function CTARoad() {
   const sectionRef = useRef<HTMLElement>(null);
+  // Fires the arrow "launch" swap and the pill's bounce on click, then clears
+  // so the next click can replay it.
+  const [launching, setLaunching] = useState(false);
+
+  const handleLaunch = () => {
+    setLaunching(true);
+    window.setTimeout(() => setLaunching(false), 500);
+  };
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -61,15 +70,15 @@ export default function CTARoad() {
     <section
       ref={sectionRef}
       id="cta-road"
-      className="relative w-full overflow-hidden bg-dark py-28"
+      className="relative w-full overflow-hidden bg-background py-28"
     >
       <div className="px-32">
         <div className="cta-road-copy text-center">
-          <h2 className="font-heading text-heading text-text-dark">
+          <h2 className="font-heading text-heading text-text">
             الطريق إلى شوارع أفضل{" "}
             <span className="text-primary">يبدأ من هنا</span>
           </h2>
-          <p className="mt-6 font-sans text-t1 leading-relaxed text-subtext-dark">
+          <p className="mt-6 font-sans text-t1 leading-relaxed text-subtext">
             عرض حيّ قصير نطبّقه على واقع مدينتكم — من رصد الأضرار حتى إثبات
             الإصلاح.
           </p>
@@ -109,7 +118,7 @@ export default function CTARoad() {
                 x={1120}
                 y={232}
                 textAnchor="middle"
-                className="fill-subtext-dark font-sans text-t4 font-bold"
+                className="fill-subtext font-sans text-t4 font-bold"
               >
                 رصد الأضرار
               </text>
@@ -123,7 +132,7 @@ export default function CTARoad() {
                 x={810}
                 y={56}
                 textAnchor="middle"
-                className="fill-subtext-dark font-sans text-t4 font-bold"
+                className="fill-subtext font-sans text-t4 font-bold"
               >
                 الإصلاح
               </text>
@@ -137,7 +146,7 @@ export default function CTARoad() {
                 x={470}
                 y={232}
                 textAnchor="middle"
-                className="fill-subtext-dark font-sans text-t4 font-bold"
+                className="fill-subtext font-sans text-t4 font-bold"
               >
                 إثبات الإصلاح
               </text>
@@ -152,8 +161,49 @@ export default function CTARoad() {
             <div className="road-cta">
               <a
                 href="#contact"
-                className="inline-block whitespace-nowrap rounded-brand bg-primary px-12 py-5 font-sans text-t2 font-bold text-on-primary shadow-[0_16px_32px_-16px_rgba(52,168,216,0.6)] transition-all duration-300 hover:scale-105 hover:bg-primary-600"
+                onClick={handleLaunch}
+                className={`inline-flex items-center gap-2.75 whitespace-nowrap rounded-full bg-dark px-7.5 py-3.75 font-sans text-t3 font-extrabold text-text-dark shadow-[0_16px_32px_-16px_rgba(14,19,18,0.6)] transition-transform duration-300 hover:scale-105 ${
+                  launching ? "cta-bounce" : ""
+                }`}
               >
+                {/* On click the navigation arrow launches: the resting arrow
+                    lifts away up-right while a fresh one flies in from below. */}
+                <span className="relative block h-5 w-4.5 overflow-hidden">
+                  <svg
+                    width="18"
+                    height="20"
+                    viewBox="0 0 19 21"
+                    fill="none"
+                    className={`absolute inset-0 transition-all duration-300 ease-out ${
+                      launching
+                        ? "-translate-y-6 translate-x-2 opacity-0"
+                        : "translate-x-0 translate-y-0 opacity-100"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M11.0001 0.496532L0.142295 19.122C-0.379772 20.0175 0.637915 21.0181 1.52446 20.4808L9.46083 15.6717C9.81279 15.4584 10.2595 15.4825 10.5864 15.7325L16.9929 20.6301C17.7649 21.2203 18.84 20.4739 18.5569 19.5443L12.8206 0.708826C12.5664 -0.126008 11.4396 -0.257404 11.0001 0.496532Z"
+                      className="fill-primary"
+                    />
+                  </svg>
+                  <svg
+                    width="18"
+                    height="20"
+                    viewBox="0 0 19 21"
+                    fill="none"
+                    className={`absolute inset-0 transition-all duration-300 ease-out ${
+                      launching
+                        ? "translate-x-0 translate-y-0 opacity-100"
+                        : "-translate-x-2 translate-y-6 opacity-0"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M11.0001 0.496532L0.142295 19.122C-0.379772 20.0175 0.637915 21.0181 1.52446 20.4808L9.46083 15.6717C9.81279 15.4584 10.2595 15.4825 10.5864 15.7325L16.9929 20.6301C17.7649 21.2203 18.84 20.4739 18.5569 19.5443L12.8206 0.708826C12.5664 -0.126008 11.4396 -0.257404 11.0001 0.496532Z"
+                      className="fill-primary"
+                    />
+                  </svg>
+                </span>
                 احجز عرضاً
               </a>
             </div>

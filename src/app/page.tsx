@@ -6,9 +6,7 @@ import Solution from "./components/Solution/Solution";
 import Workflow from "./components/Workflow/Workflow";
 import Bento from "./components/Bento/Bento";
 import SeeInAction from "./components/SeeInAction/SeeInAction";
-import CTA from "./components/CTA/CTA";
 import CTARoad from "./components/CTARoad/CTARoad";
-import CTACard from "./components/CTACard/CTACard";
 
 export default function Home() {
   return (
@@ -21,9 +19,7 @@ export default function Home() {
       <Workflow />
       <Bento />
       <SeeInAction />
-      <CTA />
       <CTARoad />
-      <CTACard />
     </main>
   );
 }
