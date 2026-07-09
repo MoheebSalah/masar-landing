@@ -51,13 +51,13 @@ export default function RollingTitle({ title, step }: Props) {
   return (
     <div className="h-9 overflow-hidden">
       <div ref={innerRef} className="relative flex flex-col items-center">
-        <h3 className="whitespace-nowrap font-sans text-t1 font-bold leading-9 text-text-dark">
+        <h3 className="whitespace-nowrap font-sans text-t1 font-bold leading-9 text-(--sec-text)">
           {current}
         </h3>
         {/* The incoming title waits just below the mask. */}
         <span
           aria-hidden="true"
-          className="absolute top-full whitespace-nowrap font-sans text-t1 font-bold leading-9 text-text-dark"
+          className="absolute top-full whitespace-nowrap font-sans text-t1 font-bold leading-9 text-(--sec-text)"
         >
           {title}
         </span>
