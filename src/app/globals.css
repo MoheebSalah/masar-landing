@@ -106,16 +106,6 @@ body {
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
 }
- /*
- * Problem section reveal: a "window" that grows on scroll to expose the light
- * content over a dark stage. The clip-path itself is set imperatively from JS
- * (lightningcss can't parse an inset() shape built from CSS variables and drops
- * the rule), so here we only hint the browser about the animated property.
- */
-.problem-reveal {
-  will-change: clip-path;
-}
-
 /*
  * Workflow section: the travelling marker's outer ring pulses outward and
  * fades, like a live-tracking ping. Animating the SVG `r` attribute; the
