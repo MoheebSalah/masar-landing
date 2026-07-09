@@ -7,6 +7,9 @@ import Workflow from "./components/Workflow/Workflow";
 import Bento from "./components/Bento/Bento";
 import SeeInAction from "./components/SeeInAction/SeeInAction";
 import CTARoad from "./components/CTARoad/CTARoad";
+import Footer from "./components/Footer/Footer";
+import PhoneShowcase from "./components/PhoneShowcase/PhoneShowcase";
+import Impact from "./components/Impact/Impact";
 
 export default function Home() {
   return (
@@ -20,6 +23,10 @@ export default function Home() {
       <Bento />
       <SeeInAction />
       <CTARoad />
+      <PhoneShowcase />
+      <Impact />
+      <Footer />
     </main>
+
   );
 }
