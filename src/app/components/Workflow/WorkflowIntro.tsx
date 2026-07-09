@@ -34,13 +34,13 @@ export default function WorkflowIntro() {
       // The left image is the deeper, faster layer; the right one trails it.
       gsap.fromTo(
         leftRef.current,
-        { y: 120 },
-        { y: -120, ease: "none", scrollTrigger: trigger }
+        { y: 190 },
+        { y: -190, ease: "none", scrollTrigger: trigger }
       );
       gsap.fromTo(
         rightRef.current,
-        { y: 60 },
-        { y: -60, ease: "none", scrollTrigger: trigger }
+        { y: 110 },
+        { y: -110, ease: "none", scrollTrigger: trigger }
       );
     }, row);
 
@@ -48,8 +48,8 @@ export default function WorkflowIntro() {
   }, []);
 
   return (
-    <div ref={rowRef} className="relative h-150 w-full">
-      <div ref={leftRef} className="absolute left-0 top-45">
+    <div ref={rowRef} className="flex h-150 w-full items-center justify-between">
+      <div ref={leftRef}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/assets/Workflow/Workflow%200%20-%202.png"
@@ -59,7 +59,7 @@ export default function WorkflowIntro() {
         />
       </div>
 
-      <div ref={rightRef} className="absolute right-0 top-5">
+      <div ref={rightRef}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/assets/Workflow/Workflow%200%20-%201.png"

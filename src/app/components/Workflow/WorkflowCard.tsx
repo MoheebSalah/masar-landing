@@ -50,8 +50,8 @@ export default function WorkflowCard({
       // Media is the stronger (deeper) parallax layer.
       gsap.fromTo(
         mediaRef.current,
-        { y: 90 },
-        { y: -90, ease: "none", scrollTrigger: trigger }
+        { y: 150 },
+        { y: -150, ease: "none", scrollTrigger: trigger }
       );
 
       // Text drifts less so the media clearly leads it.

@@ -46,7 +46,7 @@ export default function Hero() {
       {/* Background video */}
       <video
         className="absolute inset-0 h-full w-full object-cover"
-        src="/assets/HeroVideo.mp4"
+        src="/assets/Workflow/Workflow 1.mp4"
         autoPlay
         loop
         muted
