@@ -7,7 +7,7 @@ type Props = {
 // against the dark section (no real border, just a soft shadow).
 export default function PhoneFrame({ image }: Props) {
   return (
-    <div className="relative aspect-[9/19] w-[280px] rounded-[2.75rem] bg-dark p-2.5 shadow-[0_0_0_1px_rgba(247,248,247,0.08),0_30px_60px_-25px_rgba(0,0,0,0.7)]">
+    <div className="relative aspect-[9/19] w-full max-w-70 rounded-[2.75rem] bg-dark p-2.5 shadow-[0_0_0_1px_rgba(247,248,247,0.08),0_30px_60px_-25px_rgba(0,0,0,0.7)]">
       <div className="relative h-full w-full overflow-hidden rounded-[2.15rem] bg-background">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
