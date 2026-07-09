@@ -68,7 +68,7 @@ export default function WorkflowCard({
   return (
     <div
       ref={cardRef}
-      className={`flex items-center gap-20 ${
+      className={`flex h-100 items-center justify-between ${
         reverse ? "flex-row-reverse" : "flex-row"
       }`}
     >
@@ -81,7 +81,7 @@ export default function WorkflowCard({
             muted
             playsInline
             aria-hidden="true"
-            className="h-100 w-160 rounded-brand object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
+            className="h-100 w-160 rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
@@ -89,7 +89,7 @@ export default function WorkflowCard({
             src={media}
             alt=""
             aria-hidden="true"
-            className="h-100 w-160 rounded-brand object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
+            className="h-100 w-160 rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
           />
         )}
       </div>
@@ -99,8 +99,8 @@ export default function WorkflowCard({
         className="flex w-120 flex-col gap-6 text-right"
         dir="rtl"
       >
-        <h3 className="font-heading text-h2 text-text-dark">{heading}</h3>
-        <p className="text-t2 leading-9 text-subtext-dark">{paragraph}</p>
+        <h3 className="font-heading text-h1 text-text-dark">{heading}</h3>
+        <p className="text-t1 leading-10 text-subtext-dark">{paragraph}</p>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
+import WorkflowIntro from "./WorkflowIntro";
 import WorkflowCard from "./WorkflowCard";
 
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
@@ -33,29 +34,48 @@ const STEPS = [
   },
 ];
 
-// The route the arrow travels. Authored in the section's fixed 1200×1920
-// coordinate space so it threads through each image's centre:
-// start top-right → image 1 (320,300) → image 2 (880,940) → image 3 (320,1580).
+// The route the marker travels, authored in the section's fixed 1320×2760
+// coordinate space. It is intentionally angular (straight `L` segments, no
+// curves) with sharp ups and downs, like a GPS track. It starts at the top
+// right, angles into the middle to thread down between the two intro images,
+// then hugs each step image's OUTER edge — entering left images from the left
+// (x≈80) and right images from the right (x≈1240) — so the marker passes
+// behind each image from the side instead of dropping through its top.
 const ROUTE =
-  "M1030,24 C820,140 520,150 320,300 C180,520 560,760 880,940 C1180,1140 620,1380 320,1580 C240,1680 320,1780 320,1860";
+  "M1150,30 L1030,120 L760,200 L700,150 L780,320 L640,430 L740,540 L660,660 L700,760 " +
+  "L420,900 L180,1000 L80,1080 L80,1180 L80,1300 " +
+  "L420,1400 L760,1480 L700,1420 L1080,1560 L1240,1640 L1240,1760 L1240,1940 " +
+  "L980,2020 L900,1960 L540,2140 L80,2280 L80,2400 L80,2560 " +
+  "L80,2660 L80,2700";
+
+// Live GPS-style metrics that ride beside the marker. As the scroll progress
+// runs 0→1 the coordinates interpolate between these endpoints, so the numbers
+// tick over while the marker travels down the track.
+const LAT_START = 54.3056;
+const LAT_END = 54.1341;
+const LNG_START = 7.7206;
+const LNG_END = 8.1169;
 
 export default function Workflow() {
   const sectionRef = useRef<HTMLElement>(null);
   const trailRef = useRef<SVGPathElement>(null);
   const markerRef = useRef<SVGGElement>(null);
+  const labelRef = useRef<SVGGElement>(null);
+  const latRef = useRef<SVGTextElement>(null);
+  const lngRef = useRef<SVGTextElement>(null);
 
   useEffect(() => {
     const section = sectionRef.current;
     const trail = trailRef.current;
     const marker = markerRef.current;
-    if (!section || !trail || !marker) return;
+    const label = labelRef.current;
+    if (!section || !trail || !marker || !label) return;
 
     const ctx = gsap.context(() => {
       // Measure the real path length so the reveal is expressed in the same
-      // user units GSAP animates — no reliance on `pathLength` being applied
-      // before GSAP reads it (that race made the line snap to fully solid).
-      // One dash as long as the whole path, offset by that length = hidden;
-      // animating the offset to 0 grows the solid line from the start.
+      // user units GSAP animates — no reliance on `pathLength`. One dash as
+      // long as the whole path, offset by that length = hidden; animating the
+      // offset to 0 grows the solid line from the start.
       const len = trail.getTotalLength();
       gsap.set(trail, { strokeDasharray: len, strokeDashoffset: len });
 
@@ -64,16 +84,25 @@ export default function Workflow() {
           trigger: section,
           start: "top center", // begins once the route's start reaches mid-screen
           end: "bottom center",
-          scrub: 1, // arrow + trail tied to scroll position
+          scrub: 1, // marker + trail tied to scroll position
+          onUpdate: (self) => {
+            const p = self.progress;
+            const lat = LAT_START + p * (LAT_END - LAT_START);
+            const lng = LNG_START + p * (LNG_END - LNG_START);
+            if (latRef.current)
+              latRef.current.textContent = `${lat.toFixed(4)}°N`;
+            if (lngRef.current)
+              lngRef.current.textContent = `${lng.toFixed(4)}°W`;
+          },
         },
       });
 
-      // Draw the coloured trail in as we scroll: the portion behind the arrow
-      // turns solid primary while the dotted track ahead stays visible.
+      // Draw the coloured trail in as we scroll: the portion behind the marker
+      // turns solid primary over the faint primary track ahead of it.
       tl.to(trail, { strokeDashoffset: 0, ease: "none" }, 0);
 
-      // Move the marker along that same path, rotating to face the direction
-      // of travel. align/alignOrigin snap the marker's centre onto the path.
+      // Move the marker along the path, rotating to face the direction of
+      // travel. align/alignOrigin snap the marker's centre onto the path.
       tl.to(
         marker,
         {
@@ -82,6 +111,21 @@ export default function Workflow() {
             align: trail,
             alignOrigin: [0.5, 0.5],
             autoRotate: true,
+          },
+          ease: "none",
+        },
+        0,
+      );
+
+      // The coordinate label rides the same point but stays upright (no
+      // autoRotate) so the numbers remain readable while it moves.
+      tl.to(
+        label,
+        {
+          motionPath: {
+            path: trail,
+            align: trail,
+            alignOrigin: [0.5, 0.5],
           },
           ease: "none",
         },
@@ -98,31 +142,26 @@ export default function Workflow() {
       id="workflow"
       className="relative w-full overflow-hidden bg-dark py-10"
     >
-      <div className="relative mx-auto h-480 w-300">
+      <div className="relative mx-auto h-690 w-330">
         {/* Arrow route overlay, sized 1:1 with the content coordinate space */}
         <svg
-          className="pointer-events-none absolute inset-0 z-0 h-480 w-300"
-          viewBox="0 0 1200 1920"
+          className="pointer-events-none absolute inset-0 z-0 h-690 w-330"
+          viewBox="0 0 1320 2760"
           fill="none"
           aria-hidden="true"
         >
-          {/* Faint background guide strokes for depth */}
-          <g stroke="rgba(242,240,232,0.05)" strokeWidth="2" fill="none">
-            <path d="M0,220 C300,180 520,320 1200,240" />
-            <path d="M0,1120 C420,1180 760,1000 1200,1120" />
-          </g>
-
-          {/* Dotted static track showing the full route */}
+          {/* Uncompleted track: the full route in primary at low opacity */}
           <path
             d={ROUTE}
-            stroke="rgba(242,240,232,0.16)"
-            strokeWidth="2.5"
-            strokeDasharray="1 10"
+            stroke="var(--color-primary)"
+            strokeOpacity="0.28"
+            strokeWidth="3"
             strokeLinecap="round"
+            strokeLinejoin="round"
             fill="none"
           />
 
-          {/* Coloured trail that draws in on scroll. Hidden initially via a
+          {/* Completed trail that draws in on scroll. Hidden initially via a
               large dash/offset until the effect measures the exact length. */}
           <path
             ref={trailRef}
@@ -130,16 +169,17 @@ export default function Workflow() {
             stroke="var(--color-primary)"
             strokeWidth="4"
             strokeLinecap="round"
+            strokeLinejoin="round"
             fill="none"
             strokeDasharray={9999}
             strokeDashoffset={9999}
           />
 
           {/* Start dot and end target ring */}
-          <circle cx="1030" cy="24" r="5" fill="rgba(242,240,232,0.35)" />
+          <circle cx="1150" cy="30" r="5" fill="rgba(242,240,232,0.35)" />
           <circle
-            cx="320"
-            cy="1860"
+            cx="80"
+            cy="2700"
             r="7"
             fill="var(--color-dark)"
             stroke="#f2f0e8"
@@ -158,20 +198,48 @@ export default function Workflow() {
               strokeWidth="2"
             />
             <circle cx="0" cy="0" r="16" fill="var(--color-primary)" />
-            <path
-              d="M8,0 L-6,-6 L-2,0 L-6,6 Z"
-              fill="var(--color-dark)"
-            />
+            <path d="M8,0 L-6,-6 L-2,0 L-6,6 Z" fill="var(--color-dark)" />
+          </g>
+
+          {/* Live coordinates: ride the same path point, stay upright, and sit
+              clearly beside (not on) the marker. Text is updated on scroll. */}
+          <g ref={labelRef}>
+            <text
+              ref={latRef}
+              x="-36"
+              y="-6"
+              textAnchor="end"
+              fontSize={24}
+              fontWeight={700}
+              letterSpacing={1}
+              fill="#b1b4b1"
+            >
+              54.3056°N
+            </text>
+            <text
+              ref={lngRef}
+              x="-36"
+              y="22"
+              textAnchor="end"
+              fontSize={24}
+              fontWeight={700}
+              letterSpacing={1}
+              fill="#b1b4b1"
+            >
+              7.7206°W
+            </text>
           </g>
         </svg>
 
-        {/* The three workflow steps. dir=ltr keeps `flex-row` left-to-right so
-            image/text sides match the fixed path geometry above (the page is
-            RTL); each text block re-declares dir=rtl for its Arabic copy. */}
+        {/* Intro images + the three workflow steps. dir=ltr keeps `flex-row`
+            left-to-right so image/text sides match the fixed path geometry
+            above (the page is RTL); each text block re-declares dir=rtl. */}
         <div
           dir="ltr"
           className="relative z-10 flex flex-col gap-60 pt-25 pb-35"
         >
+          <WorkflowIntro />
+
           {STEPS.map((step) => (
             <WorkflowCard
               key={step.heading}

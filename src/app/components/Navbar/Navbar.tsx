@@ -64,7 +64,7 @@ export default function Navbar() {
         >
           <Logo
             className={`w-auto transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              scrolled ? "h-7" : "h-12 md:h-14"
+              scrolled ? "h-9" : "h-16 md:h-18"
             }`}
           />
         </a>
