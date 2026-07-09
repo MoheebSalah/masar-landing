@@ -117,6 +117,77 @@ body {
 }
 
 /*
+ * CTA road: the lane dashes march toward the button. The path is drawn
+ * right-to-left (reading direction), so a negative offset moves the pattern
+ * forward along the road. One period = dash 14 + gap 22.
+ */
+@keyframes road-dash {
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+.road-dash {
+  animation: road-dash 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .road-dash {
+    animation: none;
+  }
+}
+
+/*
+ * CTA button: a quick springy bounce played once on click (the class is
+ * toggled from React), acknowledging the tap as the arrow launches.
+ */
+@keyframes cta-bounce {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.92);
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cta-bounce {
+  animation: cta-bounce 0.45s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-bounce {
+    animation: none;
+  }
+}
+
+/*
+ * CTA card: the media strip drifts right-to-left forever. The track holds
+ * the set twice, so -50% is exactly one set width (each item carries the
+ * same inline-end margin — no flex gap, or the halves wouldn't line up).
+ */
+@keyframes cta-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.cta-marquee {
+  animation: cta-marquee 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-marquee {
+    animation: none;
+  }
+}
+
+/*
  * Workflow section: the travelling marker's outer ring pulses outward and
  * fades, like a live-tracking ping. Animating the SVG `r` attribute; the
  * marker's position/rotation is handled separately by GSAP MotionPath.
