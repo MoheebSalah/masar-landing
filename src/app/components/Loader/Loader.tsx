@@ -81,22 +81,40 @@ export default function Loader() {
       );
       intro.to(label, { autoAlpha: 1, duration: 0.3 }, 0.7);
 
-      // The frame keeps re-fitting the pothole: its size and aspect ratio
-      // drift the way a live bounding box jitters while it locks on — the
-      // same restless resizing the app shows when it spots a pothole.
-      const morph = gsap.timeline({ repeat: -1, yoyo: true });
-      const states = [
-        { width: 300, height: 210 },
-        { width: 470, height: 250 },
-        { width: 360, height: 330 },
-        { width: 510, height: 200 },
-        { width: 330, height: 290 },
-      ];
-      states.forEach((s) =>
-        morph.to(frame, { ...s, duration: 0.3, ease: "sine.inOut" })
+      // The frame doesn't smoothly resize — it glitches like a CV feed
+      // struggling to lock: it shows, cuts to black, snaps back a little
+      // smaller and skewed, stutters harder, then settles cleanly onto the
+      // pothole and holds there until the load completes.
+      const glitch = gsap.timeline({ delay: 1.05 });
+      const cut = (at: number, tf: gsap.TweenVars) => {
+        glitch.set(frame, { autoAlpha: 0 }, at);
+        glitch.set(frame, { autoAlpha: 1, ...tf }, at + 0.04);
+      };
+
+      // shows, then cuts and snaps back shifted
+      cut(0.0, { x: 9, y: -5, scale: 1.03, skewX: 5 });
+      glitch.set(frame, { autoAlpha: 0 }, 0.15);
+      glitch.set(frame, { autoAlpha: 1, x: 0, y: 0, scale: 1, skewX: 0 }, 0.25);
+      glitch.to(frame, { duration: 0.35 }, 0.25); // brief hold
+
+      // gets a bit smaller, glitching
+      cut(0.65, { x: -11, y: 6, scale: 0.9, skewX: -7 });
+      glitch.set(frame, { autoAlpha: 0 }, 0.75);
+      cut(0.82, { x: 7, y: -8, scale: 0.86, skewX: 9 });
+      glitch.to(frame, { duration: 0.28 }, 0.94); // hold smaller
+
+      // rapid stutter — the messiest burst
+      cut(1.28, { x: 15, y: 1, scale: 0.93, skewX: -11 });
+      cut(1.38, { x: -13, y: 6, scale: 0.88, skewX: 11 });
+      glitch.set(frame, { autoAlpha: 0 }, 1.48);
+      cut(1.56, { x: 5, y: -6, scale: 1.06, skewX: -4 });
+
+      // settle cleanly onto the pothole and hold
+      glitch.to(
+        frame,
+        { autoAlpha: 1, x: 0, y: 0, scale: 1, skewX: 0, duration: 0.4, ease: "power2.out" },
+        1.72
       );
-      morph.pause();
-      gsap.delayedCall(1.0, () => morph.play());
 
       // The load progresses on a percentage readout counting to 100.00%.
       // Reaching 100% triggers the reveal.
@@ -110,7 +128,6 @@ export default function Loader() {
           percent.textContent = counter.val.toFixed(2).padStart(5, "0") + "%";
         },
         onComplete: () => {
-          morph.kill();
           const cover =
             Math.max(window.innerWidth, window.innerHeight) * 1.02;
           // Reveal: the pothole and readout fade while the frame's inside
@@ -158,20 +175,25 @@ export default function Loader() {
         aria-hidden="true"
         className="col-start-1 row-start-1 w-140 opacity-0"
       />
-      {/* Detection bounding box — restlessly resizing over the pothole */}
+      {/* Detection bounding box — glitches, then settles over the pothole.
+          The readout tag is a child so it cuts and skews along with the box. */}
       <div
         ref={frameRef}
-        className="col-start-1 row-start-1 h-72 w-110 border-4 border-primary opacity-0"
-      />
-      {/* Class readout with the live load percentage, sitting above the box */}
-      <div
-        ref={labelRef}
-        className="col-start-1 row-start-1 flex -translate-y-57.5 items-center gap-4 font-sans opacity-0"
+        className="relative col-start-1 row-start-1 h-72 w-110 border-4 border-primary opacity-0"
       >
-        <span className="text-h3 font-bold text-primary">حفرة</span>
-        <span ref={percentRef} className="text-h3 font-bold tabular-nums text-text-dark">
-          00.00%
-        </span>
+        {/* Class readout on a primary chip, stuck just above the box's top edge */}
+        <div
+          ref={labelRef}
+          className="absolute bottom-full right-0 mb-2 flex items-center gap-3 bg-primary px-4 py-1.5 font-sans opacity-0"
+        >
+          <span className="text-t1 font-bold text-on-primary">حفرة</span>
+          <span
+            ref={percentRef}
+            className="text-t1 font-bold tabular-nums text-on-primary"
+          >
+            00.00%
+          </span>
+        </div>
       </div>
     </div>
   );
