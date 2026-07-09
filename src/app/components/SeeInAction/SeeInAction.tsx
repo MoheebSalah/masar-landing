@@ -105,14 +105,17 @@ export default function SeeInAction() {
       y: gsap.quickTo(cursor, "y", { duration: 0.2, ease: "power3.out" }),
     };
 
-    // Pause whatever is playing once the section leaves the screen.
+    // Auto-play the selected (centre) clip when the section scrolls into view,
+    // and pause it once the section leaves the screen. Only the centre clip is
+    // ever touched, so the neighbours stay still.
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) return;
         const video = videoRefs.current[mod(activeRef.current, VIDEOS.length)];
-        if (video && !video.paused) video.pause();
+        if (!video) return;
+        if (entry.isIntersecting) video.play().catch(() => {});
+        else if (!video.paused) video.pause();
       },
-      { threshold: 0 },
+      { threshold: 0.5 },
     );
     observer.observe(section);
 
@@ -261,10 +264,14 @@ export default function SeeInAction() {
             <video
               ref={(el) => {
                 videoRefs.current[i] = el;
+                // Set the property directly — browsers only permit scroll-in
+                // autoplay when muted, and React's `muted` attribute is unreliable.
+                if (el) el.muted = true;
               }}
               src={src}
               className="h-full w-full rounded-brand object-cover"
               preload="metadata"
+              muted
               playsInline
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
@@ -284,7 +291,7 @@ export default function SeeInAction() {
             the centre clip (moveCursor gates its visibility). */}
         <div
           ref={cursorRef}
-          className={`pointer-events-none absolute left-0 top-0 z-200 text-primary transition-opacity duration-200 ${
+          className={`pointer-events-none absolute left-0 top-0 z-200 text-white transition-opacity duration-200 ${
             cursorShown ? "opacity-100" : "opacity-0"
           }`}
         >

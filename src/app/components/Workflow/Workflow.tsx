@@ -40,13 +40,15 @@ const STEPS = [
 // right, angles into the middle to thread down between the two intro images,
 // then hugs each step image's OUTER edge — entering left images from the left
 // (x≈80) and right images from the right (x≈1240) — so the marker passes
-// behind each image from the side instead of dropping through its top.
+// behind each image from the side instead of dropping through its top. The
+// angles are kept gentle — long, calm diagonals with only the occasional soft
+// up-jag, echoing the smooth sweep between the bottom two images.
 const ROUTE =
-  "M1150,30 L1030,120 L760,200 L700,150 L780,320 L640,430 L740,540 L660,660 L700,760 " +
-  "L420,900 L180,1000 L80,1080 L80,1180 L80,1300 " +
-  "L420,1400 L760,1480 L700,1420 L1080,1560 L1240,1640 L1240,1760 L1240,1940 " +
-  "L980,2020 L900,1960 L540,2140 L80,2280 L80,2400 L80,2560 " +
-  "L80,2660 L80,2700";
+  "M1150,30 L940,150 L720,270 L760,470 L690,660 L720,840 " +
+  "L420,990 L80,1140 L80,1320 " +
+  "L360,1420 L460,1360 L840,1520 L1240,1660 L1240,1940 " +
+  "L980,2020 L900,1960 L540,2140 L80,2280 L80,2560 " +
+  "L80,2700";
 
 // Live GPS-style metrics that ride beside the marker. As the scroll progress
 // runs 0→1 the coordinates interpolate between these endpoints, so the numbers
@@ -118,14 +120,17 @@ export default function Workflow() {
       );
 
       // The coordinate label rides the same point but stays upright (no
-      // autoRotate) so the numbers remain readable while it moves.
+      // autoRotate) so the numbers remain readable while it moves. Note: no
+      // `alignOrigin` here — that would pin the label's bounding-box CENTRE to
+      // the path (dropping it right on top of the marker and cancelling the
+      // text's x offset). Omitting it anchors the group's local origin (0,0)
+      // to the path, so the text's negative x offset keeps it beside the marker.
       tl.to(
         label,
         {
           motionPath: {
             path: trail,
             align: trail,
-            alignOrigin: [0.5, 0.5],
           },
           ease: "none",
         },
@@ -206,7 +211,7 @@ export default function Workflow() {
           <g ref={labelRef}>
             <text
               ref={latRef}
-              x="-36"
+              x="-54"
               y="-6"
               textAnchor="end"
               fontSize={24}
@@ -218,7 +223,7 @@ export default function Workflow() {
             </text>
             <text
               ref={lngRef}
-              x="-36"
+              x="-54"
               y="22"
               textAnchor="end"
               fontSize={24}
