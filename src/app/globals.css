@@ -231,6 +231,14 @@ body {
   transform-origin: center;
 }
 
+/*
+ * Footer giant brand mark: each arrow slides up on its own during the
+ * staircase reveal, so transforms are measured against each path's own box.
+ */
+.footer-mark path {
+  transform-box: fill-box;
+}
+
 @keyframes logo-rise {
   0% {
     opacity: 0;
