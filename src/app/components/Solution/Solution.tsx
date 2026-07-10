@@ -69,6 +69,17 @@ export default function Solution() {
       frames.slice(1).forEach((frame, i) => {
         tl.to(frame, { opacity: 1, ease: "none", duration: 1 }, i);
       });
+
+      // Over the last stretch of the pinned scroll, blend this section's own
+      // background from light (#EEEAE0) to the Workflow section's dark
+      // (#0E1312). Because the darkening happens while still inside Solution,
+      // the two sections read as one continuous background — the dark
+      // Workflow simply picks up where Solution left off, with no hard seam.
+      tl.to(
+        section,
+        { backgroundColor: "#0E1312", ease: "none", duration: 1.3 },
+        2.7
+      );
     }, section);
 
     return () => ctx.revert();
