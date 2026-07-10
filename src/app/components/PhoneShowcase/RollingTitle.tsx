@@ -28,11 +28,12 @@ export default function RollingTitle({ title, step }: Props) {
     if (!inner) return;
 
     const next = title;
+    // The column is two lines tall, so half its height is one line.
     const tween = gsap.fromTo(
       inner,
       { yPercent: 0 },
       {
-        yPercent: -100,
+        yPercent: -50,
         duration: 0.6,
         ease: "power3.inOut",
         onComplete: () => {
@@ -50,14 +51,16 @@ export default function RollingTitle({ title, step }: Props) {
 
   return (
     <div className="h-9 overflow-hidden">
-      <div ref={innerRef} className="relative flex flex-col items-center">
+      <div ref={innerRef} className="flex flex-col items-center">
         <h3 className="whitespace-nowrap font-sans text-t1 font-bold leading-9 text-(--sec-text)">
           {current}
         </h3>
-        {/* The incoming title waits just below the mask. */}
+        {/* The incoming title waits on the clipped second line. It stays in
+            normal flow (not absolute) so the mask is as wide as the wider of
+            the two titles — a longer incoming title was clipped otherwise. */}
         <span
           aria-hidden="true"
-          className="absolute top-full whitespace-nowrap font-sans text-t1 font-bold leading-9 text-(--sec-text)"
+          className="whitespace-nowrap font-sans text-t1 font-bold leading-9 text-(--sec-text)"
         >
           {title}
         </span>

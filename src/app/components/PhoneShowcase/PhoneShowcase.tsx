@@ -293,7 +293,7 @@ export default function PhoneShowcase() {
       <div
         ref={carouselRef}
         dir="ltr"
-        className="relative h-183 w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
+        className="relative isolate h-183 w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
