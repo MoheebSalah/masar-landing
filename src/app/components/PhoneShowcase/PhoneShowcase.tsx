@@ -264,7 +264,7 @@ export default function PhoneShowcase() {
       </div>
 
       {/* Dark / light switch */}
-      <div className="mb-14 mt-8 flex justify-center">
+      <div className="mb-4 mt-6 flex justify-center">
         <div className="flex gap-1 rounded-full bg-(--sec-chip) p-1.5">
           <button
             type="button"
@@ -293,7 +293,7 @@ export default function PhoneShowcase() {
       <div
         ref={carouselRef}
         dir="ltr"
-        className="relative h-[820px] w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
+        className="relative h-183 w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -314,13 +314,13 @@ export default function PhoneShowcase() {
       </div>
 
       {/* Current screen title with the rolling swap */}
-      <div className="mt-14 flex justify-center">
+      <div className="mt-4 flex justify-center">
         <RollingTitle title={TITLES[active]} step={step} />
       </div>
 
       {/* Indicator — click a dot to jump to that screen. dir=ltr so the dots
           run in the same order as the phones. */}
-      <div dir="ltr" className="mt-6 flex justify-center gap-3">
+      <div dir="ltr" className="mt-3 flex justify-center gap-3">
         {TITLES.map((title, i) => (
           <button
             key={title}
