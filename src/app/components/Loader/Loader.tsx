@@ -23,7 +23,8 @@ export default function Loader() {
   const windowRef = useRef<HTMLDivElement>(null);
   const potholeRef = useRef<HTMLImageElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
-  const labelRef = useRef<HTMLSpanElement>(null);
+  const labelRef = useRef<HTMLDivElement>(null);
+  const percentRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const overlay = overlayRef.current;
@@ -31,7 +32,9 @@ export default function Loader() {
     const pothole = potholeRef.current;
     const frame = frameRef.current;
     const label = labelRef.current;
-    if (!overlay || !shadowWindow || !pothole || !frame || !label) return;
+    const percent = percentRef.current;
+    if (!overlay || !shadowWindow || !pothole || !frame || !label || !percent)
+      return;
 
     // Skip the whole show for users who opt out of motion.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -51,49 +54,100 @@ export default function Loader() {
     window.scrollTo(0, 0);
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        onComplete: () => {
-          html.style.overflow = prevOverflow;
-          html.style.scrollbarGutter = prevGutter;
-          // Pinned sections measured themselves while the scrollbar was
-          // hidden; re-measure now that it's back, or they end up a
-          // scrollbar-width too wide (horizontal overflow).
-          ScrollTrigger.refresh();
-          setDone(true);
-        },
-      });
+      const finish = () => {
+        html.style.overflow = prevOverflow;
+        html.style.scrollbarGutter = prevGutter;
+        // Pinned sections measured themselves while the scrollbar was
+        // hidden; re-measure now that it's back, or they end up a
+        // scrollbar-width too wide (horizontal overflow).
+        ScrollTrigger.refresh();
+        setDone(true);
+      };
 
-      // The pothole emerges on the dark stage.
-      tl.fromTo(
+      // Intro: the pothole emerges on the dark stage and the detection frame
+      // (with its "حفرة" readout) locks onto it.
+      const intro = gsap.timeline();
+      intro.fromTo(
         pothole,
         { autoAlpha: 0, scale: 0.9 },
         { autoAlpha: 1, scale: 1, duration: 0.7, ease: "power2.out" },
         0.05
       );
-
-      // The detection frame (with its "حفرة" tag) locks onto it, then blinks
-      // like a live bounding box confirming the hit.
-      tl.fromTo(
+      intro.fromTo(
         frame,
         { autoAlpha: 0, scale: 1.35 },
         { autoAlpha: 1, scale: 1, duration: 0.4, ease: "power3.out" },
-        0.7
+        0.6
       );
-      tl.to(frame, { opacity: 0.45, duration: 0.16, repeat: 3, yoyo: true, ease: "power1.inOut" }, 1.2);
+      intro.to(label, { autoAlpha: 1, duration: 0.3 }, 0.7);
 
-      // Reveal: the pothole and tag fade while the frame's inside clears and
-      // the square grows into a window onto the page beneath.
-      const reveal = 2.35;
-      const cover = Math.max(window.innerWidth, window.innerHeight) * 1.02;
-      tl.to(pothole, { autoAlpha: 0, duration: 0.6, ease: "power1.out" }, reveal);
-      tl.to(label, { autoAlpha: 0, duration: 0.25 }, reveal);
-      tl.to(shadowWindow, { backgroundColor: "rgba(14,19,18,0)", duration: 0.3 }, reveal);
-      tl.to(
-        [shadowWindow, frame],
-        { width: cover, height: cover, duration: 1.15, ease: "power4.inOut" },
-        reveal
+      // The frame doesn't smoothly resize — it glitches like a CV feed
+      // struggling to lock: it shows, cuts to black, snaps back a little
+      // smaller and skewed, stutters harder, then settles cleanly onto the
+      // pothole and holds there until the load completes.
+      const glitch = gsap.timeline({ delay: 1.05 });
+      const cut = (at: number, tf: gsap.TweenVars) => {
+        glitch.set(frame, { autoAlpha: 0 }, at);
+        glitch.set(frame, { autoAlpha: 1, ...tf }, at + 0.04);
+      };
+
+      // shows, then cuts and snaps back shifted
+      cut(0.0, { x: 9, y: -5, scale: 1.03, skewX: 5 });
+      glitch.set(frame, { autoAlpha: 0 }, 0.15);
+      glitch.set(frame, { autoAlpha: 1, x: 0, y: 0, scale: 1, skewX: 0 }, 0.25);
+      glitch.to(frame, { duration: 0.35 }, 0.25); // brief hold
+
+      // gets a bit smaller, glitching
+      cut(0.65, { x: -11, y: 6, scale: 0.9, skewX: -7 });
+      glitch.set(frame, { autoAlpha: 0 }, 0.75);
+      cut(0.82, { x: 7, y: -8, scale: 0.86, skewX: 9 });
+      glitch.to(frame, { duration: 0.28 }, 0.94); // hold smaller
+
+      // rapid stutter — the messiest burst
+      cut(1.28, { x: 15, y: 1, scale: 0.93, skewX: -11 });
+      cut(1.38, { x: -13, y: 6, scale: 0.88, skewX: 11 });
+      glitch.set(frame, { autoAlpha: 0 }, 1.48);
+      cut(1.56, { x: 5, y: -6, scale: 1.06, skewX: -4 });
+
+      // settle cleanly onto the pothole and hold
+      glitch.to(
+        frame,
+        { autoAlpha: 1, x: 0, y: 0, scale: 1, skewX: 0, duration: 0.4, ease: "power2.out" },
+        1.72
       );
-      tl.to(frame, { autoAlpha: 0, duration: 0.35 }, reveal + 0.85);
+
+      // The load progresses on a percentage readout counting to 100.00%.
+      // Reaching 100% triggers the reveal.
+      const counter = { val: 0 };
+      gsap.to(counter, {
+        val: 100,
+        duration: 3.6,
+        delay: 1.0,
+        ease: "power1.inOut",
+        onUpdate: () => {
+          percent.textContent = counter.val.toFixed(2).padStart(5, "0") + "%";
+        },
+        onComplete: () => {
+          const cover =
+            Math.max(window.innerWidth, window.innerHeight) * 1.02;
+          // Reveal: the pothole and readout fade while the frame's inside
+          // clears and the square grows into a window onto the page beneath.
+          const out = gsap.timeline({ onComplete: finish });
+          out.to(pothole, { autoAlpha: 0, duration: 0.6, ease: "power1.out" }, 0);
+          out.to(label, { autoAlpha: 0, duration: 0.25 }, 0);
+          out.to(
+            shadowWindow,
+            { backgroundColor: "rgba(14,19,18,0)", duration: 0.3 },
+            0
+          );
+          out.to(
+            [shadowWindow, frame],
+            { width: cover, height: cover, duration: 1.15, ease: "power4.inOut" },
+            0
+          );
+          out.to(frame, { autoAlpha: 0, duration: 0.35 }, 0.85);
+        },
+      });
     }, overlay);
 
     return () => {
@@ -121,17 +175,25 @@ export default function Loader() {
         aria-hidden="true"
         className="col-start-1 row-start-1 w-140 opacity-0"
       />
-      {/* Detection bounding box with its class tag riding the top corner */}
+      {/* Detection bounding box — glitches, then settles over the pothole.
+          The readout tag is a child so it cuts and skews along with the box. */}
       <div
         ref={frameRef}
         className="relative col-start-1 row-start-1 h-72 w-110 border-4 border-primary opacity-0"
       >
-        <span
+        {/* Class readout on a primary chip, stuck just above the box's top edge */}
+        <div
           ref={labelRef}
-          className="absolute -top-1 -right-1 -translate-y-full bg-primary px-3 py-1 font-sans text-t4 font-bold text-on-primary"
+          className="absolute bottom-full right-0 mb-2 flex items-center gap-3 bg-primary px-4 py-1.5 font-sans opacity-0"
         >
-          حفرة
-        </span>
+          <span className="text-t1 font-bold text-on-primary">حفرة</span>
+          <span
+            ref={percentRef}
+            className="text-t1 font-bold tabular-nums text-on-primary"
+          >
+            00.00%
+          </span>
+        </div>
       </div>
     </div>
   );

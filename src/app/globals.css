@@ -61,6 +61,101 @@ body {
 }
 
 /*
+ * Phone showcase themes. The section flips between two states:
+ *   mode="light" — dark section background, light app screens.
+ *   mode="dark"  — light section background, dark app screens.
+ * Every colour inside the section and the rebuilt app screens reads from
+ * these variables, so the whole state swap is a single attribute change
+ * (which the circular view-transition reveal then animates).
+ * --sec-*: the landing section around the phones. --sv-*: inside the screens.
+ */
+#app-preview[data-mode="dark"] {
+  --sec-bg: #eeeae0;
+  --sec-text: #191919;
+  --sec-sub: #6e6e6e;
+  --sec-faint: rgba(25, 25, 25, 0.25);
+  --sec-chip: rgba(25, 25, 25, 0.08);
+
+  --sv-bg: #0e1312;
+  --sv-card: #181e1c;
+  --sv-nav: #202724;
+  --sv-track: #202724;
+  --sv-line: rgba(255, 255, 255, 0.086);
+  --sv-text: #f2f0e8;
+  --sv-sub: rgba(242, 240, 232, 0.56);
+  --sv-faint: rgba(242, 240, 232, 0.34);
+  --sv-link: #34a8d8;
+  --sv-primsoft: rgba(52, 168, 216, 0.16);
+  --sv-oksoft: rgba(46, 158, 91, 0.18);
+  --sv-mapbg: #13120d;
+  --sv-mapveil: rgba(14, 19, 18, 1);
+  --sv-status: #ffffff;
+  --sv-ind: rgba(255, 255, 255, 0.7);
+  --sv-glass: rgba(14, 19, 18, 0.66);
+  --sv-glass-strong: rgba(14, 19, 18, 0.82);
+  --sv-glass-text: #ffffff;
+  --sv-glass-sub: rgba(255, 255, 255, 0.72);
+  --sv-glass-line: rgba(255, 255, 255, 0.1);
+  --sv-tile: rgba(255, 255, 255, 0.13);
+  --sv-cta: #ffffff;
+  --sv-cta-text: #0e1312;
+  --sv-veil: 14, 19, 18;
+}
+
+#app-preview[data-mode="light"] {
+  --sec-bg: #0e1312;
+  --sec-text: #f7f8f7;
+  --sec-sub: #b1b4b1;
+  --sec-faint: rgba(247, 248, 247, 0.3);
+  --sec-chip: rgba(247, 248, 247, 0.1);
+
+  --sv-bg: #eeeae0;
+  --sv-card: #ffffff;
+  --sv-nav: #ffffff;
+  --sv-track: #f6f2ea;
+  --sv-line: #e7e1d5;
+  --sv-text: #0e1312;
+  --sv-sub: #6e6a61;
+  --sv-faint: #a8a296;
+  --sv-link: #1c6f92;
+  --sv-primsoft: #d9eef8;
+  --sv-oksoft: #e2f2e8;
+  --sv-mapbg: #e6dfcf;
+  --sv-mapveil: rgba(14, 19, 18, 0.8);
+  --sv-status: #000000;
+  --sv-ind: rgba(0, 0, 0, 0.25);
+  --sv-glass: rgba(255, 255, 255, 0.7);
+  --sv-glass-strong: rgba(255, 255, 255, 0.88);
+  --sv-glass-text: #0e1312;
+  --sv-glass-sub: rgba(14, 19, 18, 0.66);
+  --sv-glass-line: rgba(14, 19, 18, 0.08);
+  --sv-tile: rgba(255, 255, 255, 0.62);
+  --sv-cta: #0e1312;
+  --sv-cta-text: #f2f0e8;
+  --sv-veil: 238, 234, 224;
+}
+
+/*
+ * Theme toggle reveal: the default view-transition cross-fade is replaced by
+ * a clip-path circle animated from the active phone's centre (driven from
+ * PhoneShowcase with the Web Animations API on the ::view-transition-new
+ * pseudo element).
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/*
  * Navbar shell: the shape morph (scroll) is slow and smooth, while the
  * hover background responds quickly. Per-property durations aren't
  * expressible with Tailwind utilities, hence this small rule.
@@ -106,16 +201,6 @@ body {
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
 }
- /*
- * Problem section reveal: a "window" that grows on scroll to expose the light
- * content over a dark stage. The clip-path itself is set imperatively from JS
- * (lightningcss can't parse an inset() shape built from CSS variables and drops
- * the rule), so here we only hint the browser about the animated property.
- */
-.problem-reveal {
-  will-change: clip-path;
-}
-
 /*
  * CTA road: the lane dashes march toward the button. The path is drawn
  * right-to-left (reading direction), so a negative offset moves the pattern
@@ -205,4 +290,70 @@ body {
 
 .wf-ring {
   animation: wf-ring 1.8s ease-out infinite;
+}
+
+/*
+ * Logo hover animation (Navbar + Footer): on hover the mark re-assembles — the
+ * centre arrow rises from below first, then the two outer arrows pop in. Each
+ * path is transformed about its own box so the translate/scale read locally.
+ */
+.logo-anim path {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/*
+ * Footer giant brand mark: each arrow slides up on its own during the
+ * staircase reveal, so transforms are measured against each path's own box.
+ */
+.footer-mark path {
+  transform-box: fill-box;
+}
+
+@keyframes logo-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(55%);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-16%);
+  }
+  75% {
+    transform: translateY(7%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes logo-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(35%) scale(0.8);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-14%) scale(1.06);
+  }
+  75% {
+    transform: translateY(6%) scale(0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.logo-anim:hover .logo-mid {
+  animation: logo-rise 0.5s ease-out both;
+}
+
+.logo-anim:hover .logo-left {
+  animation: logo-pop 0.45s ease-out both;
+  animation-delay: 0.35s;
+}
+
+.logo-anim:hover .logo-right {
+  animation: logo-pop 0.45s ease-out both;
+  animation-delay: 0.55s;
 }

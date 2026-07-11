@@ -22,6 +22,7 @@ export default function Solution() {
   const frameRefs = useRef<(HTMLImageElement | null)[]>([]);
   const rightRef = useRef<HTMLSpanElement>(null);
   const leftRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -52,10 +53,33 @@ export default function Solution() {
       tl.to(rightRef.current, { x: 0, ease: "none", duration: 4 }, 0);
       tl.to(leftRef.current, { x: 0, ease: "none", duration: 4 }, 0);
 
+      // The gap between the halves shrinks linearly from 2*offset to 0 over the
+      // x tweens (duration 4). Just before they meet — when the gap reaches
+      // 250px — flip the text from primary to white.
+      const gapThreshold = 250;
+      const timeAtThreshold = (1 - gapThreshold / (2 * offset)) * 4;
+      gsap.set(textRef.current, { color: "#34A8D8" });
+      tl.to(
+        textRef.current,
+        { color: "#F7F8F7", ease: "none", duration: 0.6 },
+        Math.max(0, timeAtThreshold - 0.6)
+      );
+
       // Crossfade through the frames, one transition per scroll segment.
       frames.slice(1).forEach((frame, i) => {
         tl.to(frame, { opacity: 1, ease: "none", duration: 1 }, i);
       });
+
+      // Over the last stretch of the pinned scroll, blend this section's own
+      // background from light (#EEEAE0) to the Workflow section's dark
+      // (#0E1312). Because the darkening happens while still inside Solution,
+      // the two sections read as one continuous background — the dark
+      // Workflow simply picks up where Solution left off, with no hard seam.
+      tl.to(
+        section,
+        { backgroundColor: "#0E1312", ease: "none", duration: 1.3 },
+        2.7
+      );
     }, section);
 
     return () => ctx.revert();
@@ -87,7 +111,10 @@ export default function Solution() {
 
       {/* Converging sentence */}
       <div className="absolute inset-0 z-10 flex items-center justify-center">
-        <div className="flex items-center gap-[0.35em] font-heading text-[3rem] text-text-dark drop-shadow-[0_2px_12px_rgba(14,19,18,0.45)] md:text-[5rem] lg:text-[6rem]">
+        <div
+          ref={textRef}
+          className="flex items-center gap-[0.35em] font-heading text-[3rem] text-primary md:text-[5rem] lg:text-[6rem]"
+        >
           <span ref={rightRef} className="whitespace-nowrap">
             مسار يغلق
           </span>

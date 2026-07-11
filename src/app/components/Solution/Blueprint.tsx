@@ -5,13 +5,13 @@
 export default function Blueprint() {
   return (
     <svg
-      className="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-90"
+      className="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-20"
       viewBox="0 0 1440 900"
       fill="none"
       preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"
     >
-      <g stroke="#D7E6E6" strokeWidth="1.5">
+      <g stroke="#9AC6D6" strokeWidth="1.75">
         {/* Top horizontal dimension line with end ticks */}
         <path
           className="bp-line [animation-delay:-0.2s]"
@@ -87,6 +87,85 @@ export default function Blueprint() {
           className="bp-line [animation-delay:-4.6s]"
           pathLength={1}
           d="M120 700 H470 V830 H120 Z"
+        />
+
+        {/* Right vertical dimension line with end ticks */}
+        <path
+          className="bp-line [animation-delay:-0.9s]"
+          pathLength={1}
+          d="M1300 210 H1330 M1315 210 V520 M1300 520 H1330"
+        />
+
+        {/* Second column circle with cross-hair (upper center) */}
+        <circle
+          className="bp-line [animation-delay:-2.2s]"
+          pathLength={1}
+          cx="720"
+          cy="300"
+          r="55"
+        />
+        <path
+          className="bp-line [animation-delay:-3.5s]"
+          pathLength={1}
+          d="M720 230 V370 M650 300 H790"
+        />
+
+        {/* Corner brace arc (upper left) */}
+        <path
+          className="bp-line [animation-delay:-1.4s]"
+          pathLength={1}
+          d="M300 60 A120 120 0 0 1 180 180"
+        />
+
+        {/* Stepped section detail (mid left) */}
+        <path
+          className="bp-line [animation-delay:-2.7s]"
+          pathLength={1}
+          d="M60 400 H110 V450 H160 V500 H210 V550"
+        />
+
+        {/* Small grid cluster (upper right corner) */}
+        <path
+          className="bp-line [animation-delay:-3.3s]"
+          pathLength={1}
+          d="M1320 40 H1420 M1320 90 H1420 M1320 140 H1420 M1320 40 V140 M1370 40 V140 M1420 40 V140"
+        />
+
+        {/* Angled dimension line with ticks (lower right) */}
+        <path
+          className="bp-line [animation-delay:-4.9s]"
+          pathLength={1}
+          d="M980 860 L1240 720 M980 850 L985 872 M1240 710 L1245 732"
+        />
+
+        {/* Diamond / rotated square (center) */}
+        <path
+          className="bp-line [animation-delay:-5.4s]"
+          pathLength={1}
+          d="M540 200 L610 270 L540 340 L470 270 Z"
+        />
+
+        {/* Long horizontal dimension line (bottom) */}
+        <path
+          className="bp-line [animation-delay:-3.9s]"
+          pathLength={1}
+          d="M560 850 V880 M560 865 H900 M900 850 V880"
+        />
+
+        {/* Concentric target detail (lower center) */}
+        <circle
+          className="bp-line [animation-delay:-5.7s]"
+          pathLength={1}
+          cx="740"
+          cy="700"
+          r="45"
+        />
+        <circle
+          className="bp-line [animation-delay:-6.1s]"
+          pathLength={1}
+          cx="740"
+          cy="700"
+          r="22"
         />
       </g>
     </svg>
