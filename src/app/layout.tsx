@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Almarai } from "next/font/google";
+import { Almarai, Poppins } from "next/font/google";
 import localFont from "next/font/local";
 import "lenis/dist/lenis.css";
 import "./globals.css";
@@ -9,6 +9,13 @@ const almarai = Almarai({
   variable: "--font-almarai",
   subsets: ["arabic"],
   weight: ["300", "400", "700", "800"],
+});
+
+// Latin display face used only for the big impact numbers.
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 const rubbama = localFont({
@@ -31,8 +38,19 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className={`${almarai.variable} ${rubbama.variable} h-full antialiased`}
+      className={`${almarai.variable} ${rubbama.variable} ${poppins.variable} h-full antialiased`}
     >
+      <head>
+        {/* Runs before the browser restores a saved scroll position on
+            refresh, so every load starts at the top (the hero) instead of
+            wherever the visitor last was. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "if('scrollRestoration' in history){history.scrollRestoration='manual';}",
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <SmoothScroll>{children}</SmoothScroll>
       </body>

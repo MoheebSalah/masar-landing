@@ -21,12 +21,12 @@ export default function Home() {
       <Problem />
       <Solution />
       <Workflow />
-      <Bento />
+      {/* <Bento /> */}
       <SeeInAction />
-      <CTARoad />
       <PhoneShowcase />
       <Map />
       <Impact />
+      <CTARoad />
       <Footer />
     </main>
 

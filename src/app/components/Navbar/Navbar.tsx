@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
 import Logo from "../Logo/Logo";
 import NavLink from "./NavLink";
+import { onLoaderDone } from "../Loader/loaderSignal";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const lastY = useRef(0);
+  const logoRef = useRef<HTMLAnchorElement>(null);
+  const linksRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => {
@@ -40,6 +44,25 @@ export default function Navbar() {
     };
   }, []);
 
+  // Reveal the logo and links once the loading screen clears — they drop in
+  // from just above their resting spot, the links trailing the logo slightly.
+  useEffect(() => {
+    const targets = [logoRef.current, linksRef.current].filter(Boolean);
+    if (targets.length === 0) return;
+
+    gsap.set(targets, { autoAlpha: 0, y: -16 });
+    const unsubscribe = onLoaderDone(() => {
+      gsap.to(targets, {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.7,
+        ease: "power3.out",
+        stagger: 0.12,
+      });
+    });
+    return unsubscribe;
+  }, []);
+
   return (
     <header
       dir="ltr"
@@ -56,6 +79,7 @@ export default function Navbar() {
       >
         {/* Logo — left corner, with the wordmark below it */}
         <a
+          ref={logoRef}
           href="#"
           aria-label="مسار"
           className={`relative flex items-center transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
@@ -71,6 +95,7 @@ export default function Navbar() {
 
         {/* Anchors — right corner */}
         <div
+          ref={linksRef}
           dir="rtl"
           className={`flex items-center gap-8 text-t3 transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
             scrolled ? "text-on-primary" : "text-text-dark"

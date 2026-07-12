@@ -60,6 +60,7 @@ const LNG_END = 8.1169;
 
 export default function Workflow() {
   const sectionRef = useRef<HTMLElement>(null);
+  const routeRef = useRef<SVGPathElement>(null);
   const trailRef = useRef<SVGPathElement>(null);
   const markerRef = useRef<SVGGElement>(null);
   const labelRef = useRef<SVGGElement>(null);
@@ -80,6 +81,24 @@ export default function Workflow() {
       // offset to 0 grows the solid line from the start.
       const len = trail.getTotalLength();
       gsap.set(trail, { strokeDasharray: len, strokeDashoffset: len });
+
+      // Fade in the route and the travelling marker as the section arrives —
+      // the pathway and its arrow ease up from transparent instead of being
+      // there from the first frame. (Only these; the rest of the section is
+      // left untouched.)
+      gsap.set([routeRef.current, trail, marker], { opacity: 0 });
+      ScrollTrigger.create({
+        trigger: section,
+        start: "top 80%",
+        once: true,
+        onEnter: () => {
+          gsap.to([routeRef.current, trail, marker], {
+            opacity: 1,
+            duration: 1,
+            ease: "power2.out",
+          });
+        },
+      });
 
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -105,6 +124,9 @@ export default function Workflow() {
 
       // Move the marker along the path, rotating to face the direction of
       // travel. align/alignOrigin snap the marker's centre onto the path.
+      // immediateRender puts it on the path's start point right away — without
+      // it the marker sits at its authored origin (the SVG's top-left corner)
+      // until the scroll scrubs the timeline, then jumps onto the path.
       tl.to(
         marker,
         {
@@ -115,6 +137,7 @@ export default function Workflow() {
             autoRotate: true,
           },
           ease: "none",
+          immediateRender: true,
         },
         0,
       );
@@ -133,6 +156,7 @@ export default function Workflow() {
             align: trail,
           },
           ease: "none",
+          immediateRender: true,
         },
         0,
       );
@@ -157,6 +181,7 @@ export default function Workflow() {
         >
           {/* Uncompleted track: the full route in primary at low opacity */}
           <path
+            ref={routeRef}
             d={ROUTE}
             stroke="var(--color-primary)"
             strokeOpacity="0.28"

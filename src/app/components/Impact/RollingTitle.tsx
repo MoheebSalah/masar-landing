@@ -5,15 +5,14 @@ import { flushSync } from "react-dom";
 import gsap from "gsap";
 
 type Props = {
-  // The screen title to show.
+  // The stat title to show next to the bullet.
   title: string;
   // Changing this triggers the roll, even if the text is identical.
   step: number;
 };
 
-// The visible title rolls up and out of the masked box while the next title
-// rises into its place from below. Both live inside an overflow-hidden box so
-// they're clipped at the title's edges.
+// The visible title rolls up and out of a masked box while the next title rises
+// into its place from below — the same swap the phone-showcase title uses.
 export default function RollingTitle({ title, step }: Props) {
   const innerRef = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(title);
@@ -38,9 +37,8 @@ export default function RollingTitle({ title, step }: Props) {
         duration: 0.6,
         ease: "power3.inOut",
         onComplete: () => {
-          // Swap the settled title into the top line, then snap the column back
-          // to the start. flushSync commits the new text before the reset so the
-          // top line never flashes the previous title for a frame.
+          // Commit the settled title into the top line before snapping the
+          // column back, so the top line never flashes the previous title.
           flushSync(() => setCurrent(next));
           gsap.set(inner, { yPercent: 0 });
         },
@@ -53,17 +51,16 @@ export default function RollingTitle({ title, step }: Props) {
   }, [step]);
 
   return (
-    <div className="h-9 overflow-hidden">
-      <div ref={innerRef} className="flex flex-col items-center">
-        <h3 className="whitespace-nowrap font-sans text-t1 font-bold leading-9 text-(--sec-text)">
+    <div className="h-12 overflow-hidden">
+      <div ref={innerRef} className="flex flex-col">
+        <span className="whitespace-nowrap font-sans text-[2rem] font-bold leading-12 text-text">
           {current}
-        </h3>
-        {/* The incoming title waits on the clipped second line. It stays in
-            normal flow (not absolute) so the mask is as wide as the wider of
-            the two titles — a longer incoming title was clipped otherwise. */}
+        </span>
+        {/* The incoming title waits on the clipped second line, kept in normal
+            flow so the mask is as wide as the wider of the two titles. */}
         <span
           aria-hidden="true"
-          className="whitespace-nowrap font-sans text-t1 font-bold leading-9 text-(--sec-text)"
+          className="whitespace-nowrap font-sans text-[2rem] font-bold leading-12 text-text"
         >
           {title}
         </span>

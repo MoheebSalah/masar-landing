@@ -3,12 +3,15 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { onLoaderDone } from "../Loader/loaderSignal";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const subheadRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -36,6 +39,27 @@ export default function Hero() {
     }, section);
 
     return () => ctx.revert();
+  }, []);
+
+  // Reveal the headline and subhead once the loading screen clears. Each line
+  // rises into place, the subhead trailing the headline for a gentle cascade.
+  useEffect(() => {
+    const heading = headingRef.current;
+    const subhead = subheadRef.current;
+    if (!heading || !subhead) return;
+
+    const lines = [...heading.children, ...subhead.children];
+    gsap.set(lines, { autoAlpha: 0, y: 40 });
+    const unsubscribe = onLoaderDone(() => {
+      gsap.to(lines, {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.9,
+        ease: "power3.out",
+        stagger: 0.15,
+      });
+    });
+    return unsubscribe;
   }, []);
 
   return (
@@ -67,13 +91,13 @@ export default function Hero() {
         className="relative z-10 flex min-h-screen flex-col justify-end items-start px-8 pb-12 md:px-16 md:pb-16 lg:px-32 lg:pb-24"
       >
         <div className="max-w-4xl text-right">
-          <h1 className="font-heading font-semibold text-[3.25rem] leading-[1.12] text-text-dark md:text-[5.5rem] lg:text-[7rem]">
+          <h1 ref={headingRef} className="font-heading font-semibold text-[3.25rem] leading-[1.12] text-text-dark md:text-[5.5rem] lg:text-[7rem]">
             <span className="block">من الحفرة إلى الإصلاح</span>
             <span className="block">
               <span className="text-primary">مسار</span> واضح
             </span>
           </h1>
-          <p className="mt-8 max-w-2xl font-sans text-t3 font-light leading-relaxed text-subtext-dark md:mt-10 md:text-t2 lg:text-t1">
+          <p ref={subheadRef} className="mt-8 max-w-2xl font-sans text-t3 font-light leading-relaxed text-subtext-dark md:mt-10 md:text-t2 lg:text-t1">
             <span className="block">منصّة ذكية ترصد أضرار الطرق تلقائيًا</span>
             <span className="block text-primary">
               وتحوّلها إلى خطة إصلاح مُنظّمة وقابلة للمتابعة.

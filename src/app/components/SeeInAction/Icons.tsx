@@ -28,3 +28,23 @@ export function PauseIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// A simple stroked chevron used for the carousel's edge controls. It points
+// left by default; rotate it 180° for the right-hand control. Stroke colour
+// inherits from the parent (set it with a text utility, e.g. `text-primary`).
+export function ChevronIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M9 4 L2 12 L9 20" />
+    </svg>
+  );
+}

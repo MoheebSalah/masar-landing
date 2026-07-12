@@ -29,6 +29,7 @@
   /* Fonts */
   --font-sans: var(--font-almarai);
   --font-heading: var(--font-rubbama);
+  --font-numeric: var(--font-poppins);
 
   /* Typography scale */
   --text-heading: 56px;

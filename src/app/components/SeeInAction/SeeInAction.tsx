@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { PlayIcon, PauseIcon } from "./Icons";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { PlayIcon, PauseIcon, ChevronIcon } from "./Icons";
+
+gsap.registerPlugin(ScrollTrigger);
 
 // Detection clips shown in the carousel, in display order.
 const VIDEOS = [
@@ -13,88 +16,75 @@ const VIDEOS = [
   "/assets/Carousel/Carousel 5.mp4",
 ];
 
-// The centre clip spans the carousel width minus this gutter on each side; the
-// two neighbours peek in through those gutters.
-const SIDE_GUTTER = 128;
-// Gap (px) between two neighbouring slide edges.
-const GAP = 32;
-// Beyond this many steps from centre a slide is fully off-screen, so it hides
-// and — being invisible — can teleport across the wrap without being seen.
-const VISIBLE_CUTOFF = 1.5;
-// How dark an unselected clip gets (overlay opacity at one step out).
-const DIM = 0.55;
-// Pointer travel below this (px) still counts as a click, not a drag.
-const CLICK_TOLERANCE = 6;
+// How the outgoing/incoming clips look at one full step from centre: pushed a
+// full frame width aside (so at rest they sit off-stage and are clipped),
+// shrunk, faded and blurred. Everything eases back to zero at the centre.
+const SHRINK = 0.16; // scale drop at one step out
+const FADE = 0.72; // opacity drop at one step out
+const BLUR = 10; // px of blur at one step out
 
 const mod = (value: number, n: number) => ((value % n) + n) % n;
 
 export default function SeeInAction() {
   const sectionRef = useRef<HTMLElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const overlayRefs = useRef<(HTMLDivElement | null)[]>([]);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   // Unbounded virtual index — its remainder over VIDEOS.length is the clip on
   // screen; letting it run past the ends is what makes the loop seam-free.
   const activeRef = useRef(0);
-  const slideWidthRef = useRef(0);
-  const stepRef = useRef(0);
-  // Reused across settles so a grab mid-animation can kill the running tween.
+  // Distance one step moves a clip: a full viewport width, so a leaving clip
+  // travels clear off the screen's edge (not just the frame's) and the arriving
+  // one enters from the opposite screen edge.
+  const travelRef = useRef(0);
+  // Reused across settles so a new click mid-animation can kill the tween.
   const proxyRef = useRef({ v: 0 });
+  const inViewRef = useRef(false);
   const cursorTo = useRef<{ x: gsap.QuickToFunc; y: gsap.QuickToFunc } | null>(
     null,
   );
-  const drag = useRef({
-    down: false,
-    dragging: false,
-    startX: 0,
-    dx: 0,
-    pressedIndex: 0,
-  });
 
-  const [active, setActive] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [cursorShown, setCursorShown] = useState(false);
 
-  // Draw the track for a (possibly fractional) virtual position: place every
-  // slide at its nearest wrapped copy so the centre clip sits upright while the
-  // neighbours slide out, dim, and drop behind. Copies more than one step out
-  // sit off-screen and are hidden, so their wrap-around jump is never seen.
+  // Draw the track for a (possibly fractional) virtual position. Each slide is
+  // a frame-sized copy centred by xPercent -50; adding signed × one viewport
+  // width shifts it a whole screen per step, so at rest the neighbours sit fully
+  // off the screen's edges (the section's overflow clip hides them). As a copy
+  // nears the centre it slides in from the screen edge while it un-shrinks,
+  // un-fades and un-blurs — and reverses on the way out.
   const render = (virtual: number) => {
     const n = VIDEOS.length;
-    const width = slideWidthRef.current;
-    const step = stepRef.current;
+    const travel = travelRef.current;
     slideRefs.current.forEach((slide, i) => {
       if (!slide) return;
       let signed = i - virtual;
       signed -= n * Math.round(signed / n);
-      const distance = Math.abs(signed);
-      const visible = distance < VISIBLE_CUTOFF;
+      const dist = Math.abs(signed);
+      const t = Math.min(dist, 1);
       gsap.set(slide, {
         xPercent: -50,
-        x: signed * step,
-        width,
-        opacity: visible ? 1 : 0,
-        pointerEvents: visible ? "auto" : "none",
-        zIndex: Math.round(100 - distance * 10),
+        x: signed * travel,
+        scale: 1 - t * SHRINK,
+        opacity: 1 - t * FADE,
+        filter: `blur(${(t * BLUR).toFixed(2)}px)`,
+        zIndex: Math.round(100 - dist * 10),
+        pointerEvents: dist < 0.5 ? "auto" : "none",
       });
-      const overlay = overlayRefs.current[i];
-      // The centre clip is fully lit; neighbours darken with distance.
-      if (overlay) gsap.set(overlay, { opacity: Math.min(DIM, distance * DIM) });
     });
   };
 
   useEffect(() => {
-    const container = containerRef.current;
     const section = sectionRef.current;
+    const stage = stageRef.current;
     const cursor = cursorRef.current;
-    if (!container || !section || !cursor) return;
+    if (!section || !stage || !cursor) return;
 
     const measure = () => {
-      slideWidthRef.current = Math.max(0, container.offsetWidth - SIDE_GUTTER * 2);
-      stepRef.current = slideWidthRef.current + GAP;
+      travelRef.current = window.innerWidth;
       render(activeRef.current);
     };
     measure();
@@ -105,11 +95,11 @@ export default function SeeInAction() {
       y: gsap.quickTo(cursor, "y", { duration: 0.2, ease: "power3.out" }),
     };
 
-    // Auto-play the selected (centre) clip when the section scrolls into view,
-    // and pause it once the section leaves the screen. Only the centre clip is
-    // ever touched, so the neighbours stay still.
+    // Auto-play the selected clip when the section scrolls into view, and pause
+    // it once the section leaves. Only the centre clip is ever touched.
     const observer = new IntersectionObserver(
       ([entry]) => {
+        inViewRef.current = entry.isIntersecting;
         const video = videoRefs.current[mod(activeRef.current, VIDEOS.length)];
         if (!video) return;
         if (entry.isIntersecting) video.play().catch(() => {});
@@ -119,10 +109,26 @@ export default function SeeInAction() {
     );
     observer.observe(section);
 
+    // Reveal the heading and sub-line as the section scrolls into view.
+    const ctx = gsap.context(() => {
+      const headingEls = headingRef.current
+        ? Array.from(headingRef.current.children)
+        : [];
+      gsap.from(headingEls, {
+        y: 24,
+        autoAlpha: 0,
+        duration: 0.6,
+        ease: "power2.out",
+        stagger: 0.12,
+        scrollTrigger: { trigger: section, start: "top 75%", once: true },
+      });
+    }, section);
+
     return () => {
       window.removeEventListener("resize", measure);
       observer.disconnect();
       cursorTo.current = null;
+      ctx.revert();
     };
   }, []);
 
@@ -133,16 +139,20 @@ export default function SeeInAction() {
     else video.pause();
   };
 
-  // Settle onto a virtual target, taking whatever direction it points; leaving
-  // a playing clip pauses it (it stays mounted, so its progress survives).
+  // Settle onto a virtual target from whatever direction it points. The leaving
+  // clip pauses (it stays mounted, so its progress survives); the arriving clip
+  // starts playing if the section is on screen.
   const settle = (toVirtual: number) => {
     const from = activeRef.current;
-    if (toVirtual !== from) {
-      const current = videoRefs.current[mod(from, VIDEOS.length)];
-      if (current && !current.paused) current.pause();
-    }
+    if (toVirtual === from) return;
+    const leaving = videoRefs.current[mod(from, VIDEOS.length)];
+    if (leaving && !leaving.paused) leaving.pause();
+
     activeRef.current = toVirtual;
-    setActive(mod(toVirtual, VIDEOS.length));
+    const real = mod(toVirtual, VIDEOS.length);
+    const arriving = videoRefs.current[real];
+    if (arriving && inViewRef.current) arriving.play().catch(() => {});
+
     const proxy = proxyRef.current;
     gsap.killTweensOf(proxy);
     proxy.v = from;
@@ -154,176 +164,124 @@ export default function SeeInAction() {
     });
   };
 
-  // Jump to a real clip index by the shortest way round the loop.
-  const goTo = (realTarget: number) => {
-    const n = VIDEOS.length;
-    let delta = realTarget - mod(activeRef.current, n);
-    delta -= n * Math.round(delta / n);
-    settle(activeRef.current + delta);
-  };
+  // Step one clip forward (+1: current slides left, next arrives from the
+  // right) or back (-1). The virtual index loops, so it never runs out.
+  const step = (dir: 1 | -1) => settle(activeRef.current + dir);
 
-  // Move the play/pause cursor and show it only while the pointer is over the
-  // centre clip — never over the dimmed neighbours peeking at the sides.
-  const moveCursor = (clientX: number, clientY: number) => {
-    const container = containerRef.current;
-    if (!container || !cursorTo.current) return;
-    const rect = container.getBoundingClientRect();
-    const localX = clientX - rect.left;
-    cursorTo.current.x(localX);
-    cursorTo.current.y(clientY - rect.top);
-    const overCentre = Math.abs(localX - rect.width / 2) < slideWidthRef.current / 2;
-    setCursorShown(overCentre);
-  };
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const el = (e.target as HTMLElement).closest("[data-index]");
-    const pressedIndex = el
-      ? Number(el.getAttribute("data-index"))
-      : mod(activeRef.current, VIDEOS.length);
-    drag.current = {
-      down: true,
-      dragging: false,
-      startX: e.clientX,
-      dx: 0,
-      pressedIndex,
-    };
-    gsap.killTweensOf(proxyRef.current);
-  };
-
+  // Trail the play/pause glyph on the pointer while it is over the stage.
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    moveCursor(e.clientX, e.clientY);
-    const d = drag.current;
-    if (!d.down) return;
-    d.dx = e.clientX - d.startX;
-    if (!d.dragging && Math.abs(d.dx) > CLICK_TOLERANCE) d.dragging = true;
-    if (!d.dragging) return;
-    // Content follows the finger; the loop is endless, so no rubber-banding.
-    render(activeRef.current - d.dx / stepRef.current);
-  };
-
-  const onPointerUp = () => {
-    const d = drag.current;
-    if (!d.down) return;
-    d.down = false;
-    // A still click toggles playback on the centre clip, or jumps to a
-    // neighbour that was clicked; a real drag lands on the nearest clip.
-    if (!d.dragging) {
-      if (d.pressedIndex === mod(activeRef.current, VIDEOS.length)) togglePlay();
-      else goTo(d.pressedIndex);
-      return;
-    }
-    settle(Math.round(activeRef.current - d.dx / stepRef.current));
-  };
-
-  const onPointerCancel = () => {
-    if (!drag.current.down) return;
-    drag.current.down = false;
-    settle(activeRef.current);
+    const stage = stageRef.current;
+    if (!stage || !cursorTo.current) return;
+    const rect = stage.getBoundingClientRect();
+    cursorTo.current.x(e.clientX - rect.left);
+    cursorTo.current.y(e.clientY - rect.top);
+    setCursorShown(true);
   };
 
   return (
     <section
       ref={sectionRef}
       id="see-in-action"
-      className="w-full overflow-hidden bg-background py-24"
+      className="w-full overflow-hidden bg-dark py-24"
     >
       {/* Section heading */}
-      <div className="mx-auto mb-16 max-w-3xl px-8 text-center">
-        <h2 className="font-heading text-h2 text-text">شاهدها أثناء العمل</h2>
-        <p className="mx-auto mt-4 max-w-xl font-sans text-t2 text-subtext">
+      <div ref={headingRef} className="mx-auto mb-14 max-w-3xl px-8 text-center">
+        <h2 className="font-heading text-h2 text-text-dark">شاهدها أثناء العمل</h2>
+        <p className="mx-auto mt-4 max-w-xl font-sans text-t2 text-subtext-dark">
           مقاطع حقيقية توضّح كيف يرصد النظام الحفر ويصنّف خطورتها لحظة بلحظة.
         </p>
       </div>
 
-      {/* Infinite coverflow carousel. dir=ltr keeps the array order running
-          left-to-right, so the previous (last) clip peeks on the left and the
-          next clip peeks on the right. */}
-      <div
-        ref={containerRef}
-        dir="ltr"
-        className="relative h-200 w-full touch-pan-y select-none"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onPointerLeave={() => setCursorShown(false)}
-      >
-        {VIDEOS.map((src, i) => (
+      {/* Video frame with edge navigation */}
+      <div className="mx-auto w-full max-w-375 px-8">
+        <div className="relative">
+          {/* Stage: a fixed 16:9 frame the centre clip fills. It is NOT clipped
+              — the leaving/arriving clips slide right across the screen and are
+              clipped only at the viewport by the section's overflow. `z-0` makes
+              it a stacking context so the corner brackets stay above every clip.
+              dir=ltr keeps the array order running left-to-right for the slide. */}
           <div
-            key={src}
-            ref={(el) => {
-              slideRefs.current[i] = el;
-            }}
-            data-index={i}
-            className={`absolute left-1/2 top-0 h-full ${
-              i === active ? "cursor-none" : "cursor-pointer"
-            }`}
+            ref={stageRef}
+            dir="ltr"
+            className="relative z-0 aspect-video w-full cursor-none select-none"
+            onPointerMove={onPointerMove}
+            onPointerLeave={() => setCursorShown(false)}
+            onClick={togglePlay}
           >
-            <video
-              ref={(el) => {
-                videoRefs.current[i] = el;
-                // Set the property directly — browsers only permit scroll-in
-                // autoplay when muted, and React's `muted` attribute is unreliable.
-                if (el) el.muted = true;
-              }}
-              src={src}
-              className="h-full w-full rounded-brand object-cover"
-              preload="metadata"
-              muted
-              playsInline
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-            />
-            {/* Dimming veil — GSAP fades it in as the clip moves off centre. */}
+            {VIDEOS.map((src, i) => (
+              <div
+                key={src}
+                ref={(el) => {
+                  slideRefs.current[i] = el;
+                }}
+                className="absolute left-1/2 top-0 h-full w-full"
+              >
+                <video
+                  ref={(el) => {
+                    videoRefs.current[i] = el;
+                    // Set the property directly — browsers only permit scroll-in
+                    // autoplay when muted, and React's `muted` attribute is unreliable.
+                    if (el) el.muted = true;
+                  }}
+                  src={src}
+                  // object-cover locks every clip into the same frame no matter
+                  // its own resolution or aspect ratio. The rounding lives on the
+                  // video itself now that the stage no longer clips.
+                  className="h-full w-full rounded-2xl object-cover shadow-lg"
+                  preload="metadata"
+                  muted
+                  playsInline
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                />
+              </div>
+            ))}
+
+            {/* Custom cursor: the play/pause glyph trailing the pointer. Both
+                stay mounted and cross-fade so switching never jumps. */}
             <div
-              ref={(el) => {
-                overlayRefs.current[i] = el;
-              }}
-              className="pointer-events-none absolute inset-0 rounded-brand bg-dark opacity-0"
-            />
+              ref={cursorRef}
+              className={`pointer-events-none absolute left-0 top-0 z-200 text-white transition-opacity duration-200 ${
+                cursorShown ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <PlayIcon
+                className={`absolute left-0 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
+                  isPlaying ? "scale-50 opacity-0" : "scale-100 opacity-100"
+                }`}
+              />
+              <PauseIcon
+                className={`absolute left-0 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
+                  isPlaying ? "scale-100 opacity-100" : "scale-50 opacity-0"
+                }`}
+              />
+            </div>
           </div>
-        ))}
 
-        {/* Custom cursor: the play/pause glyph trailing the pointer. Both stay
-            mounted and cross-fade so switching never jumps; it only shows over
-            the centre clip (moveCursor gates its visibility). */}
-        <div
-          ref={cursorRef}
-          className={`pointer-events-none absolute left-0 top-0 z-200 text-white transition-opacity duration-200 ${
-            cursorShown ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <PlayIcon
-            className={`absolute left-0 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
-              isPlaying ? "scale-50 opacity-0" : "scale-100 opacity-100"
-            }`}
-          />
-          <PauseIcon
-            className={`absolute left-0 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
-              isPlaying ? "scale-100 opacity-100" : "scale-50 opacity-0"
-            }`}
-          />
-        </div>
-      </div>
-
-      {/* Indicator — click a dot to jump to that clip. dir=ltr so the dots run
-          in the same order as the clips. */}
-      <div dir="ltr" className="mt-14 flex justify-center gap-3">
-        {VIDEOS.map((src, i) => (
+          {/* Edge navigation: each button is the whole strip of space down one
+              side of the video. No background at rest — on hover a soft veil
+              fades in from that edge and the chevron nudges outward. The left
+              button steps to the previous clip, the right button to the next. */}
           <button
-            key={src}
             type="button"
-            aria-label={`المقطع ${i + 1}`}
-            onClick={() => goTo(i)}
-            className={`h-2.5 cursor-pointer rounded-full transition-all duration-300 ${
-              i === active
-                ? "w-9 bg-primary"
-                : "w-2.5 bg-text/30 hover:bg-text/60"
-            }`}
-          />
-        ))}
+            aria-label="المقطع السابق"
+            onClick={() => step(-1)}
+            className="group absolute inset-y-0 left-0 z-30 flex w-[16%] cursor-pointer items-center justify-start"
+          >
+            <span className="pointer-events-none absolute inset-0 rounded-l-2xl bg-linear-to-r from-dark/55 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <ChevronIcon className="relative h-12 w-12 text-primary drop-shadow-lg transition-transform duration-300 group-hover:-translate-x-1.5" />
+          </button>
+
+          <button
+            type="button"
+            aria-label="المقطع التالي"
+            onClick={() => step(1)}
+            className="group absolute inset-y-0 right-0 z-30 flex w-[16%] cursor-pointer items-center justify-end"
+          >
+            <span className="pointer-events-none absolute inset-0 rounded-r-2xl bg-linear-to-l from-dark/55 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <ChevronIcon className="relative h-12 w-12 rotate-180 text-primary drop-shadow-lg transition-transform duration-300 group-hover:translate-x-1.5" />
+          </button>
+        </div>
       </div>
     </section>
   );

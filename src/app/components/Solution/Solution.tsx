@@ -22,6 +22,8 @@ export default function Solution() {
   const frameRefs = useRef<(HTMLImageElement | null)[]>([]);
   const rightRef = useRef<HTMLSpanElement>(null);
   const leftRef = useRef<HTMLSpanElement>(null);
+  const rightSlideRef = useRef<HTMLSpanElement>(null);
+  const leftSlideRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,6 +40,30 @@ export default function Solution() {
       gsap.set(frames.slice(1), { opacity: 0 });
       gsap.set(rightRef.current, { x: offset });
       gsap.set(leftRef.current, { x: -offset });
+
+      // Entrance: as the section scrolls into view, the first frame fades up
+      // and each sentence half slides in from its own edge — the right half
+      // travels in from the right, the left half from the left — then settles.
+      // The slide lives on the wrapper spans so it composes cleanly with the
+      // scrubbed convergence that the inner spans (rightRef/leftRef) drive.
+      const slideIn = window.innerWidth * 0.35;
+      gsap.set(frames[0], { autoAlpha: 0 });
+      gsap.set(rightSlideRef.current, { autoAlpha: 0, x: slideIn });
+      gsap.set(leftSlideRef.current, { autoAlpha: 0, x: -slideIn });
+      ScrollTrigger.create({
+        trigger: section,
+        start: "top 70%",
+        once: true,
+        onEnter: () => {
+          gsap.to(frames[0], { autoAlpha: 1, duration: 0.9, ease: "power2.out" });
+          gsap.to([rightSlideRef.current, leftSlideRef.current], {
+            autoAlpha: 1,
+            x: 0,
+            duration: 1,
+            ease: "power3.out",
+          });
+        },
+      });
 
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -115,11 +141,15 @@ export default function Solution() {
           ref={textRef}
           className="flex items-center gap-[0.35em] font-heading text-[3rem] text-primary md:text-[5rem] lg:text-[6rem]"
         >
-          <span ref={rightRef} className="whitespace-nowrap">
-            مسار يغلق
+          <span ref={rightSlideRef} className="inline-block">
+            <span ref={rightRef} className="inline-block whitespace-nowrap">
+              مسار يغلق
+            </span>
           </span>
-          <span ref={leftRef} className="whitespace-nowrap">
-            هذه الفجوة
+          <span ref={leftSlideRef} className="inline-block">
+            <span ref={leftRef} className="inline-block whitespace-nowrap">
+              هذه الفجوة
+            </span>
           </span>
         </div>
       </div>
