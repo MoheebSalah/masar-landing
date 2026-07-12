@@ -20,11 +20,11 @@ export default function Home() {
       <Problem />
       <Solution />
       <Workflow />
-      <Bento />
+      {/* <Bento /> */}
       <SeeInAction />
-      <CTARoad />
       <PhoneShowcase />
       <Impact />
+      <CTARoad />
       <Footer />
     </main>
 

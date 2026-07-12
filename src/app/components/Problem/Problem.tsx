@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ProblemPoint from "./ProblemPoint";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const PROBLEMS = [
   {
@@ -26,10 +30,12 @@ const progressForPoint = (index: number) => (index + 0.5) / PROBLEMS.length;
 
 export default function Problem() {
   const sectionRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const textColRef = useRef<HTMLDivElement>(null);
+  const imageColRef = useRef<HTMLDivElement>(null);
   const lockRef = useRef(false);
   const lockTimer = useRef<number>(0);
   const [active, setActive] = useState(0);
-  const [imageVisible, setImageVisible] = useState(false);
 
   // Clicking a point scrolls the page to the position that maps to it, so the
   // selection stays in sync with the scroll-driven cycling. While that smooth
@@ -91,18 +97,40 @@ export default function Problem() {
     window.addEventListener("scrollend", onScrollEnd);
     window.addEventListener("resize", onScroll);
 
-    // Reveal the image with an entrance animation once the section comes in view.
-    const observer = new IntersectionObserver(
-      ([entry]) => setImageVisible(entry.isIntersecting),
-      { threshold: 0.1 }
-    );
-    observer.observe(section);
+    // Reveal the title, the problem words and the image together as the section
+    // scrolls into view — one timeline keeps them in sync: the title leads, the
+    // words rise in from the start side (right, in RTL) with a stagger, and the
+    // image fades up alongside them.
+    const ctx = gsap.context(() => {
+      const words = textColRef.current
+        ? Array.from(textColRef.current.children)
+        : [];
+      gsap.set(titleRef.current, { autoAlpha: 0, y: 24 });
+      gsap.set(words, { autoAlpha: 0, x: 60 });
+      gsap.set(imageColRef.current, { autoAlpha: 0, y: 40, scale: 0.95 });
+
+      const reveal = gsap.timeline({
+        scrollTrigger: { trigger: section, start: "top 65%", once: true },
+      });
+      reveal
+        .to(titleRef.current, { autoAlpha: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0)
+        .to(
+          words,
+          { autoAlpha: 1, x: 0, duration: 0.7, ease: "power3.out", stagger: 0.15 },
+          0.15
+        )
+        .to(
+          imageColRef.current,
+          { autoAlpha: 1, y: 0, scale: 1, duration: 0.9, ease: "power3.out" },
+          0.15
+        );
+    }, section);
 
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("scrollend", onScrollEnd);
       window.removeEventListener("resize", onScroll);
-      observer.disconnect();
+      ctx.revert();
       window.clearTimeout(lockTimer.current);
       if (frame) cancelAnimationFrame(frame);
     };
@@ -117,12 +145,24 @@ export default function Problem() {
       ref={sectionRef}
       className="relative z-10 h-[300vh] rounded-t-brand bg-background"
     >
-      <div className="sticky top-0 flex h-screen items-center">
+      <div className="sticky top-0 flex h-screen flex-col justify-center gap-10">
+        {/* Section title — tells visitors this section is about the hurdles of
+            keeping roads in repair (what Masar is built to fix). Padding matches
+            the grid below so it lines up with the problem words. */}
+        <div
+          ref={titleRef}
+          className="px-8 text-right md:px-16 lg:px-32"
+        >
+          <h2 className="font-heading text-h3 text-text lg:text-h2">
+            تحديات إدارة أضرار الطرق
+          </h2>
+        </div>
+
         {/* Side distance matches the hero headline's (px-8 / md:px-16 / lg:px-32) */}
         <div className="grid w-full grid-cols-[1fr_1.3fr] items-stretch gap-12 px-8 md:px-16 lg:px-32">
           {/* Right (start side in RTL) — the problems we solve.
               Spread to match the image's height, top and bottom. */}
-          <div className="flex flex-col justify-between text-right">
+          <div ref={textColRef} className="flex flex-col justify-between text-right">
             {PROBLEMS.map((problem, index) => (
               <ProblemPoint
                 key={problem.word}
@@ -136,10 +176,8 @@ export default function Problem() {
 
           {/* Left — image of the selected problem */}
           <div
-            className={`relative aspect-3/2 w-full self-center overflow-hidden rounded-brand transition-all duration-700 ease-out ${imageVisible
-              ? "translate-y-0 scale-100 opacity-100"
-              : "translate-y-8 scale-95 opacity-0"
-              }`}
+            ref={imageColRef}
+            className="relative aspect-3/2 w-full self-center overflow-hidden rounded-brand"
           >
             {PROBLEMS.map((problem, index) => (
               // eslint-disable-next-line @next/next/no-img-element

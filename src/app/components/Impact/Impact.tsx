@@ -1,4 +1,5 @@
 import StatRow from "./StatRow";
+import ImpactHeading from "./ImpactHeading";
 
 // The four headline numbers, in scroll order. `reversed` alternates which side
 // the number sits on so the rows zig-zag down the page.
@@ -35,18 +36,7 @@ export default function Impact() {
   return (
     <section id="impact" className="w-full bg-background px-32 py-32">
       {/* Section heading — colored heavy line over a thin dark line */}
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-heading leading-tight">
-          <span className="block text-8xl font-heading text-primary">أرقامٌ تعكس</span>
-          <span className="block font-sans font-light text-text">
-            أثراً ملموس
-          </span>
-        </h2>
-        <p className="mx-auto mt-6 max-w-2xl font-sans text-t2 text-subtext">
-          أرقام تعكس التحسينات الفعلية في سرعة الاستجابة، كفاءة العمل، وجودة
-          إدارة الطرق من خلال منصة موحدة ومدعومة بالبيانات.
-        </p>
-      </div>
+      <ImpactHeading />
 
       {/* Alternating rows with a hairline divider between each */}
       <div className="mx-auto mt-24 max-w-6xl">

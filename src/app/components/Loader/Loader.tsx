@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { signalLoaderDone } from "./loaderSignal";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -38,7 +39,10 @@ export default function Loader() {
 
     // Skip the whole show for users who opt out of motion.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const raf = requestAnimationFrame(() => setDone(true));
+      const raf = requestAnimationFrame(() => {
+        signalLoaderDone();
+        setDone(true);
+      });
       return () => cancelAnimationFrame(raf);
     }
 
@@ -61,6 +65,7 @@ export default function Loader() {
         // hidden; re-measure now that it's back, or they end up a
         // scrollbar-width too wide (horizontal overflow).
         ScrollTrigger.refresh();
+        signalLoaderDone();
         setDone(true);
       };
 

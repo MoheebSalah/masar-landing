@@ -33,6 +33,17 @@ export default function RootLayout({
       dir="rtl"
       className={`${almarai.variable} ${rubbama.variable} h-full antialiased`}
     >
+      <head>
+        {/* Runs before the browser restores a saved scroll position on
+            refresh, so every load starts at the top (the hero) instead of
+            wherever the visitor last was. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "if('scrollRestoration' in history){history.scrollRestoration='manual';}",
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <SmoothScroll>{children}</SmoothScroll>
       </body>

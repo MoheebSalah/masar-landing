@@ -28,6 +28,7 @@ export default function StatRow({
   reversed = false,
 }: Props) {
   const numberRef = useRef<HTMLSpanElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = numberRef.current;
@@ -46,6 +47,19 @@ export default function StatRow({
           el.textContent = `${prefix}${Math.round(counter.v)}${suffix}`;
         },
       });
+
+      // Reveal the two title lines alongside the count (the number keeps its
+      // own count-up; this only fades/slides the label text in).
+      if (titleRef.current) {
+        gsap.from(Array.from(titleRef.current.children), {
+          y: 20,
+          autoAlpha: 0,
+          duration: 0.6,
+          ease: "power2.out",
+          stagger: 0.1,
+          scrollTrigger: { trigger: el, start: "top 85%", once: true },
+        });
+      }
     });
 
     return () => ctx.revert();
@@ -53,6 +67,7 @@ export default function StatRow({
 
   const title = (
     <div
+      ref={titleRef}
       className={`font-sans text-h2 font-light leading-tight text-text ${
         reversed ? "text-left" : "text-right"
       }`}

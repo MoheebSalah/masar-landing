@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { PlayIcon, PauseIcon } from "./Icons";
+
+gsap.registerPlugin(ScrollTrigger);
 
 // Detection clips shown in the carousel, in display order.
 const VIDEOS = [
@@ -30,6 +33,7 @@ const mod = (value: number, n: number) => ((value % n) + n) % n;
 
 export default function SeeInAction() {
   const sectionRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -119,10 +123,26 @@ export default function SeeInAction() {
     );
     observer.observe(section);
 
+    // Reveal the heading and sub-line as the section scrolls into view.
+    const ctx = gsap.context(() => {
+      const headingEls = headingRef.current
+        ? Array.from(headingRef.current.children)
+        : [];
+      gsap.from(headingEls, {
+        y: 24,
+        autoAlpha: 0,
+        duration: 0.6,
+        ease: "power2.out",
+        stagger: 0.12,
+        scrollTrigger: { trigger: section, start: "top 75%", once: true },
+      });
+    }, section);
+
     return () => {
       window.removeEventListener("resize", measure);
       observer.disconnect();
       cursorTo.current = null;
+      ctx.revert();
     };
   }, []);
 
@@ -230,7 +250,7 @@ export default function SeeInAction() {
       className="w-full overflow-hidden bg-background py-24"
     >
       {/* Section heading */}
-      <div className="mx-auto mb-16 max-w-3xl px-8 text-center">
+      <div ref={headingRef} className="mx-auto mb-16 max-w-3xl px-8 text-center">
         <h2 className="font-heading text-h2 text-text">شاهدها أثناء العمل</h2>
         <p className="mx-auto mt-4 max-w-xl font-sans text-t2 text-subtext">
           مقاطع حقيقية توضّح كيف يرصد النظام الحفر ويصنّف خطورتها لحظة بلحظة.

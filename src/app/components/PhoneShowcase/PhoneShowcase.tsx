@@ -46,6 +46,8 @@ type DocumentWithVT = Document & {
 
 export default function PhoneShowcase() {
   const sectionRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -112,6 +114,25 @@ export default function PhoneShowcase() {
         duration: 0.6,
         ease: "power2.out",
         stagger: 0.05,
+        scrollTrigger: {
+          trigger: section,
+          start: "top 60%",
+          once: true,
+        },
+      });
+
+      // The heading, sub-line and the light/dark toggle rise in together as the
+      // section arrives — the screen internals (.sc-anim) follow on their own.
+      const headerEls = [
+        ...(headingRef.current ? Array.from(headingRef.current.children) : []),
+        toggleRef.current,
+      ].filter(Boolean);
+      gsap.from(headerEls, {
+        y: 24,
+        autoAlpha: 0,
+        duration: 0.6,
+        ease: "power2.out",
+        stagger: 0.12,
         scrollTrigger: {
           trigger: section,
           start: "top 60%",
@@ -254,7 +275,7 @@ export default function PhoneShowcase() {
       className="w-full overflow-hidden bg-(--sec-bg) px-8 py-32"
     >
       {/* Section heading */}
-      <div className="mx-auto max-w-3xl text-center">
+      <div ref={headingRef} className="mx-auto max-w-3xl text-center">
         <h2 className="font-heading text-h2 text-(--sec-text)">
           تطبيق مسار بين يديك
         </h2>
@@ -264,7 +285,7 @@ export default function PhoneShowcase() {
       </div>
 
       {/* Dark / light switch */}
-      <div className="mb-4 mt-6 flex justify-center">
+      <div ref={toggleRef} className="mb-4 mt-6 flex justify-center">
         <div className="flex gap-1 rounded-full bg-(--sec-chip) p-1.5">
           <button
             type="button"
