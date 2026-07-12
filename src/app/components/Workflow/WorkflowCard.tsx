@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { blurReveal } from "./blurReveal";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -60,6 +61,12 @@ export default function WorkflowCard({
         { y: 36 },
         { y: -36, ease: "none", scrollTrigger: trigger }
       );
+
+      // Both the media and the text blur into focus as the card scrolls in.
+      // Triggered off the (non-parallaxed) card so the reveal points are stable.
+      [mediaRef.current, textRef.current].forEach((el) => {
+        if (el) blurReveal(el, card);
+      });
     }, card);
 
     return () => ctx.revert();
