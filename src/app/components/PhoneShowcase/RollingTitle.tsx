@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import gsap from "gsap";
 
 type Props = {
@@ -37,8 +38,10 @@ export default function RollingTitle({ title, step }: Props) {
         duration: 0.6,
         ease: "power3.inOut",
         onComplete: () => {
-          // Swap the settled title in and snap the column back to the start.
-          setCurrent(next);
+          // Swap the settled title into the top line, then snap the column back
+          // to the start. flushSync commits the new text before the reset so the
+          // top line never flashes the previous title for a frame.
+          flushSync(() => setCurrent(next));
           gsap.set(inner, { yPercent: 0 });
         },
       },

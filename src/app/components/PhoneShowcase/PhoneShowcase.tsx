@@ -28,7 +28,7 @@ const TITLES = [
 const N = TITLES.length;
 
 // Distance (px) between two neighbouring phone centres.
-const STEP = 340;
+const STEP = 310;
 // Pointer travel below this (px) still counts as a click, not a drag.
 const CLICK_TOLERANCE = 6;
 
@@ -72,7 +72,9 @@ export default function PhoneShowcase() {
 
   // Lay the slides out for a (possibly fractional) position. Every slide is
   // wrapped to its nearest representative around the centre, so the loop has
-  // no ends: the far slide teleports sides while fully faded out.
+  // no ends: the far slide teleports sides while fully faded out. The track
+  // curves back in depth — off-centre phones drop, tilt, shrink and blur
+  // (rather than darken), so the active screen reads as the sharp one in front.
   const render = (virtual: number) => {
     slideRefs.current.forEach((slide, i) => {
       if (!slide) return;
@@ -84,8 +86,11 @@ export default function PhoneShowcase() {
         x: signed * STEP,
         y: capped * capped * 30,
         rotation: Math.sign(signed) * capped * 12,
-        scale: Math.max(0.76, 1 - 0.09 * capped),
-        autoAlpha: d > 2.55 ? 0 : Math.max(0.25, 1 - 0.38 * d),
+        scale: Math.max(0.82, 1 - 0.08 * capped),
+        filter: `blur(${capped * 2}px)`,
+        // Full opacity for on-screen phones; only fade the far one as it
+        // teleports across the loop seam.
+        autoAlpha: d > 2.55 ? 0 : d > 2.2 ? (2.55 - d) / 0.35 : 1,
         zIndex: Math.round(100 - d * 10),
         transformOrigin: "50% 50%",
       });
@@ -314,7 +319,7 @@ export default function PhoneShowcase() {
       <div
         ref={carouselRef}
         dir="ltr"
-        className="relative isolate h-183 w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
+        className="relative isolate h-172 w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -327,7 +332,7 @@ export default function PhoneShowcase() {
               slideRefs.current[i] = el;
             }}
             data-index={i}
-            className="absolute left-1/2 top-0 -ml-43.75 will-change-transform"
+            className="absolute left-1/2 top-0 -ml-40 will-change-transform"
           >
             <ScreenFrame>{screen}</ScreenFrame>
           </div>
@@ -335,7 +340,7 @@ export default function PhoneShowcase() {
       </div>
 
       {/* Current screen title with the rolling swap */}
-      <div className="mt-4 flex justify-center">
+      <div className="mt-12 flex justify-center">
         <RollingTitle title={TITLES[active]} step={step} />
       </div>
 
