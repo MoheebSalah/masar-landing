@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { setLenis } from "./lenisInstance";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -19,6 +20,8 @@ export default function SmoothScroll({
     window.scrollTo(0, 0);
 
     const lenis = new Lenis();
+    // Publish it so other components can drive programmatic smooth scrolls.
+    setLenis(lenis);
 
     // Lenis keeps its own virtual scroll position; if it initialised from a
     // browser-restored offset it would ease the page back down after our
@@ -39,6 +42,7 @@ export default function SmoothScroll({
     return () => {
       gsap.ticker.remove(raf);
       lenis.destroy();
+      setLenis(null);
     };
   }, []);
 
