@@ -80,45 +80,47 @@ export default function Loader() {
       );
       intro.fromTo(
         frame,
-        { autoAlpha: 0, scale: 1.35 },
-        { autoAlpha: 1, scale: 1, duration: 0.4, ease: "power3.out" },
+        { autoAlpha: 0, scale: 1.4 },
+        { autoAlpha: 1, scale: 1.2, duration: 0.45, ease: "power3.out" },
         0.6
       );
       intro.to(label, { autoAlpha: 1, duration: 0.3 }, 0.7);
 
-      // The frame doesn't smoothly resize — it glitches like a CV feed
-      // struggling to lock: it shows, cuts to black, snaps back a little
-      // smaller and skewed, stutters harder, then settles cleanly onto the
-      // pothole and holds there until the load completes.
-      const glitch = gsap.timeline({ delay: 1.05 });
-      const cut = (at: number, tf: gsap.TweenVars) => {
-        glitch.set(frame, { autoAlpha: 0 }, at);
-        glitch.set(frame, { autoAlpha: 1, ...tf }, at + 0.04);
-      };
-
-      // shows, then cuts and snaps back shifted
-      cut(0.0, { x: 9, y: -5, scale: 1.03, skewX: 5 });
-      glitch.set(frame, { autoAlpha: 0 }, 0.15);
-      glitch.set(frame, { autoAlpha: 1, x: 0, y: 0, scale: 1, skewX: 0 }, 0.25);
-      glitch.to(frame, { duration: 0.35 }, 0.25); // brief hold
-
-      // gets a bit smaller, glitching
-      cut(0.65, { x: -11, y: 6, scale: 0.9, skewX: -7 });
-      glitch.set(frame, { autoAlpha: 0 }, 0.75);
-      cut(0.82, { x: 7, y: -8, scale: 0.86, skewX: 9 });
-      glitch.to(frame, { duration: 0.28 }, 0.94); // hold smaller
-
-      // rapid stutter — the messiest burst
-      cut(1.28, { x: 15, y: 1, scale: 0.93, skewX: -11 });
-      cut(1.38, { x: -13, y: 6, scale: 0.88, skewX: 11 });
-      glitch.set(frame, { autoAlpha: 0 }, 1.48);
-      cut(1.56, { x: 5, y: -6, scale: 1.06, skewX: -4 });
-
-      // settle cleanly onto the pothole and hold
-      glitch.to(
+      // The frame doesn't snap straight onto the pothole — it hunts for the
+      // lock like a CV detector refining its box: it starts big, then resizes
+      // smaller and drifts a little off to one side (not yet centred), then
+      // keeps shrinking and correcting side to side, closing in on the centre
+      // each pass until it settles precisely over the pothole and holds.
+      const lock = gsap.timeline({ delay: 1.05 });
+      // much smaller, drifts off to the right — a rough first guess
+      lock.to(
         frame,
-        { autoAlpha: 1, x: 0, y: 0, scale: 1, skewX: 0, duration: 0.4, ease: "power2.out" },
-        1.72
+        { scale: 1.15, x: 62, y: -26, duration: 0.5, ease: "power2.inOut" },
+        0
+      );
+      // smaller again, over-corrects to the left
+      lock.to(
+        frame,
+        { scale: 0.82, x: -42, y: 18, duration: 0.45, ease: "power2.inOut" },
+        0.62
+      );
+      // smaller still, closing in — a slight nudge back to the right
+      lock.to(
+        frame,
+        { scale: 0.62, x: 22, y: -9, duration: 0.4, ease: "power2.inOut" },
+        1.15
+      );
+      // one last fine correction — a tiny nudge back to the left
+      lock.to(
+        frame,
+        { scale: 0.7, x: -14, y: 7, duration: 0.38, ease: "power2.inOut" },
+        1.6
+      );
+      // locks tightly onto the pothole and holds
+      lock.to(
+        frame,
+        { scale: 0.65, x: 0, y: 0, duration: 0.4, ease: "power3.out" },
+        2.02
       );
 
       // The load progresses on a percentage readout counting to 100.00%.
@@ -145,9 +147,25 @@ export default function Loader() {
             { backgroundColor: "rgba(14,19,18,0)", duration: 0.3 },
             0
           );
+          // Clear the frame's primary fill too, so the growing box becomes a
+          // clean window onto the page rather than tinting it primary.
+          out.to(
+            frame,
+            { backgroundColor: "rgba(52,168,216,0)", duration: 0.3 },
+            0
+          );
+          // The frame settled tight at scale 0.5; expand it back to full scale
+          // as it grows so the box opens all the way out to the viewport edges
+          // (the shadowWindow stays at scale 1, so scale:1 is a no-op for it).
           out.to(
             [shadowWindow, frame],
-            { width: cover, height: cover, duration: 1.15, ease: "power4.inOut" },
+            {
+              width: cover,
+              height: cover,
+              scale: 1,
+              duration: 1.15,
+              ease: "power4.inOut",
+            },
             0
           );
           out.to(frame, { autoAlpha: 0, duration: 0.35 }, 0.85);
@@ -184,7 +202,7 @@ export default function Loader() {
           The readout tag is a child so it cuts and skews along with the box. */}
       <div
         ref={frameRef}
-        className="relative col-start-1 row-start-1 h-72 w-110 border-4 border-primary opacity-0"
+        className="relative col-start-1 row-start-1 h-72 w-110 border-4 border-primary bg-primary/40 opacity-0"
       >
         {/* Class readout on a primary chip, stuck just above the box's top edge */}
         <div
