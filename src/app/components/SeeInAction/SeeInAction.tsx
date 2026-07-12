@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { PlayIcon, PauseIcon, LogoArrow } from "./Icons";
+import { PlayIcon, PauseIcon, ChevronIcon } from "./Icons";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -47,7 +47,6 @@ export default function SeeInAction() {
     null,
   );
 
-  const [active, setActive] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [cursorShown, setCursorShown] = useState(false);
 
@@ -151,7 +150,6 @@ export default function SeeInAction() {
 
     activeRef.current = toVirtual;
     const real = mod(toVirtual, VIDEOS.length);
-    setActive(real);
     const arriving = videoRefs.current[real];
     if (arriving && inViewRef.current) arriving.play().catch(() => {});
 
@@ -169,14 +167,6 @@ export default function SeeInAction() {
   // Step one clip forward (+1: current slides left, next arrives from the
   // right) or back (-1). The virtual index loops, so it never runs out.
   const step = (dir: 1 | -1) => settle(activeRef.current + dir);
-
-  // Jump to a real clip index by the shortest way round the loop (dots).
-  const goTo = (realTarget: number) => {
-    const n = VIDEOS.length;
-    let delta = realTarget - mod(activeRef.current, n);
-    delta -= n * Math.round(delta / n);
-    settle(activeRef.current + delta);
-  };
 
   // Trail the play/pause glyph on the pointer while it is over the stage.
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -202,8 +192,8 @@ export default function SeeInAction() {
         </p>
       </div>
 
-      {/* Video frame + viewfinder brackets */}
-      <div className="mx-auto w-full max-w-[1500px] px-8">
+      {/* Video frame with edge navigation */}
+      <div className="mx-auto w-full max-w-375 px-8">
         <div className="relative">
           {/* Stage: a fixed 16:9 frame the centre clip fills. It is NOT clipped
               — the leaving/arriving clips slide right across the screen and are
@@ -251,7 +241,7 @@ export default function SeeInAction() {
                 stay mounted and cross-fade so switching never jumps. */}
             <div
               ref={cursorRef}
-              className={`pointer-events-none absolute left-0 top-0 z-[200] text-white transition-opacity duration-200 ${
+              className={`pointer-events-none absolute left-0 top-0 z-200 text-white transition-opacity duration-200 ${
                 cursorShown ? "opacity-100" : "opacity-0"
               }`}
             >
@@ -268,56 +258,28 @@ export default function SeeInAction() {
             </div>
           </div>
 
-          {/* Viewfinder brackets: a short primary outline hugging each corner,
-              like a capture frame. Sits a clear gap outside the frame; its corner
-              radius (video's 16px + the 20px gap = 36px) keeps the curve
-              concentric with the video's rounded corners. */}
-          <div className="pointer-events-none absolute -inset-5 z-30">
-            <span className="absolute left-0 top-0 h-14 w-14 rounded-tl-[36px] border-l-2 border-t-2 border-primary" />
-            <span className="absolute right-0 top-0 h-14 w-14 rounded-tr-[36px] border-r-2 border-t-2 border-primary" />
-            <span className="absolute bottom-0 left-0 h-14 w-14 rounded-bl-[36px] border-b-2 border-l-2 border-primary" />
-            <span className="absolute bottom-0 right-0 h-14 w-14 rounded-br-[36px] border-b-2 border-r-2 border-primary" />
-          </div>
-        </div>
-
-        {/* Controls: prev/next arrows (the logo's chevron) around a dot
-            indicator. The left button steps to the clip on the left, the right
-            button to the clip on the right. Each arrow points the way the strip
-            slides — left button → strip slides right, right button → slides
-            left — so the glyphs face opposite their button's side. */}
-        <div dir="ltr" className="mt-10 flex items-center justify-center gap-6">
+          {/* Edge navigation: each button is the whole strip of space down one
+              side of the video. No background at rest — on hover a soft veil
+              fades in from that edge and the chevron nudges outward. The left
+              button steps to the previous clip, the right button to the next. */}
           <button
             type="button"
             aria-label="المقطع السابق"
             onClick={() => step(-1)}
-            className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-text-dark/5 text-primary transition-colors duration-200 hover:bg-text-dark/10"
+            className="group absolute inset-y-0 left-0 z-30 flex w-[16%] cursor-pointer items-center justify-start"
           >
-            <LogoArrow className="h-10 w-10 rotate-90" />
+            <span className="pointer-events-none absolute inset-0 rounded-l-2xl bg-linear-to-r from-dark/55 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <ChevronIcon className="relative h-12 w-12 text-primary drop-shadow-lg transition-transform duration-300 group-hover:-translate-x-1.5" />
           </button>
-
-          <div className="flex items-center gap-3">
-            {VIDEOS.map((src, i) => (
-              <button
-                key={src}
-                type="button"
-                aria-label={`المقطع ${i + 1}`}
-                onClick={() => goTo(i)}
-                className={`h-2.5 cursor-pointer rounded-full transition-all duration-300 ${
-                  i === active
-                    ? "w-9 bg-primary"
-                    : "w-2.5 bg-text-dark/25 hover:bg-text-dark/50"
-                }`}
-              />
-            ))}
-          </div>
 
           <button
             type="button"
             aria-label="المقطع التالي"
             onClick={() => step(1)}
-            className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-text-dark/5 text-primary transition-colors duration-200 hover:bg-text-dark/10"
+            className="group absolute inset-y-0 right-0 z-30 flex w-[16%] cursor-pointer items-center justify-end"
           >
-            <LogoArrow className="h-10 w-10 -rotate-90" />
+            <span className="pointer-events-none absolute inset-0 rounded-r-2xl bg-linear-to-l from-dark/55 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <ChevronIcon className="relative h-12 w-12 rotate-180 text-primary drop-shadow-lg transition-transform duration-300 group-hover:translate-x-1.5" />
           </button>
         </div>
       </div>
