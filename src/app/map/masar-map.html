@@ -466,23 +466,47 @@ return maplibregl$1;
         .catch(function () { return STYLE_URL; });
     }
 
+    // WebGL is required to draw the map. If the browser can't create a context
+    // (hardware acceleration disabled, blocklisted GPU, a VM/remote desktop, …)
+    // show a short note in the map's palette instead of a blank panel.
+    function showMapFallback() {
+      var el = document.getElementById("map");
+      if (!el) return;
+      el.innerHTML =
+        '<div style="position:absolute;inset:0;display:flex;align-items:center;' +
+        'justify-content:center;padding:32px;text-align:center;">' +
+        '<div style="max-width:440px;font-family:inherit;color:#6E6A61;">' +
+        '<div style="font-size:16px;font-weight:800;color:#0E1312;margin-bottom:8px;">' +
+        'تعذّر عرض الخريطة</div>' +
+        '<div style="font-size:13.5px;line-height:1.75;">' +
+        'تحتاج الخريطة إلى متصفح يدعم رسوميات WebGL. فعِّل «تسريع الأجهزة» ' +
+        '(Hardware acceleration) من إعدادات المتصفح ثم أعد تحميل الصفحة.' +
+        '</div></div></div>';
+    }
+
     Promise.all([loadStyle(), Promise.resolve(BOUNDARY_DATA)])
       .then(function (res) {
         var style = res[0], boundary = res[1];
 
-        var map = new maplibregl.Map({
-          container: "map",
-          style: style,
-          center: HEBRON_CENTER,
-          // Boot at the regional intro framing; the page scrubs it in. No
-          // maxBounds yet (they'd clamp the zoomed-out view), and minZoom is
-          // pinned to the intro so it can't drift further out. Both are
-          // restored to the Hebron limits once the intro finishes.
-          zoom: INTRO_ZOOM,
-          minZoom: INTRO_ZOOM,
-          maxZoom: HEBRON_MAX_ZOOM,
-          attributionControl: false,
-        });
+        var map;
+        try {
+          map = new maplibregl.Map({
+            container: "map",
+            style: style,
+            center: HEBRON_CENTER,
+            // Boot at the regional intro framing; the page scrubs it in. No
+            // maxBounds yet (they'd clamp the zoomed-out view), and minZoom is
+            // pinned to the intro so it can't drift further out.
+            zoom: INTRO_ZOOM,
+            minZoom: INTRO_ZOOM,
+            maxZoom: HEBRON_MAX_ZOOM,
+            attributionControl: false,
+          });
+        } catch (e) {
+          // Most commonly a WebGL-context failure — degrade gracefully.
+          showMapFallback();
+          return;
+        }
         MAP = map;
 
         // The page owns the camera during the scroll intro — silence every

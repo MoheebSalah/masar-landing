@@ -24,8 +24,8 @@ export default function Home() {
       {/* <Bento /> */}
       <SeeInAction />
       <PhoneShowcase />
-      <Map />
       <Impact />
+      <Map />
       <CTARoad />
       <Footer />
     </main>
