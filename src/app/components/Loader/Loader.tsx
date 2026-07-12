@@ -137,6 +137,12 @@ export default function Loader() {
         onComplete: () => {
           const cover =
             Math.max(window.innerWidth, window.innerHeight) * 1.02;
+          // The frame settled smaller than full scale during the lock; match
+          // the dark window to that same scale now so the dark cutout lines up
+          // exactly with the detection box before they grow out together.
+          gsap.set(shadowWindow, {
+            scale: gsap.getProperty(frame, "scale") as number,
+          });
           // Reveal: the pothole and readout fade while the frame's inside
           // clears and the square grows into a window onto the page beneath.
           const out = gsap.timeline({ onComplete: finish });
