@@ -9,6 +9,7 @@ import SeeInAction from "./components/SeeInAction/SeeInAction";
 import CTARoad from "./components/CTARoad/CTARoad";
 import Footer from "./components/Footer/Footer";
 import PhoneShowcase from "./components/PhoneShowcase/PhoneShowcase";
+import Map from "./components/Map/Map";
 import Impact from "./components/Impact/Impact";
 
 export default function Home() {
@@ -24,6 +25,7 @@ export default function Home() {
       <SeeInAction />
       <CTARoad />
       <PhoneShowcase />
+      <Map />
       <Impact />
       <Footer />
     </main>
