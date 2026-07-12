@@ -64,6 +64,17 @@
     }
     .masar-marker .disc svg { display: block; }
 
+    /* Entrance "pop": animated on a wrapper so it composes cleanly with both
+       MapLibre's positioning transform (on .masar-marker) and the disc's hover
+       scale (on .disc). Hidden until the page adds .is-revealed on scroll. */
+    .masar-marker .pop {
+      display: block;
+      transform: scale(0);
+      opacity: 0;
+      transition: transform .5s cubic-bezier(.34, 1.56, .64, 1), opacity .3s ease;
+    }
+    .masar-marker.is-revealed .pop { transform: scale(1); opacity: 1; }
+
     /* ── Popup: a faithful copy of the app's on-map pothole card ─────────── */
     .masar-popup .maplibregl-popup-content {
       padding: 0; background: transparent; border: 0; box-shadow: none;
@@ -263,6 +274,61 @@ return maplibregl$1;
     var HEBRON_MAX_ZOOM = 18;
     var HEBRON_MAX_BOUNDS = [[35.018, 31.484], [35.138, 31.577]];
 
+    /* ── Scroll intro: the map boots at this regional (Palestine / Levant)
+       zoom and plays a single, time-based zoom-in to Hebron — then pops the
+       markers — when the embedding page sends "masar-play" (fired once, as the
+       section scrolls to centre). It never reverses and never re-plays. Driven
+       over postMessage so the self-contained file still works standalone; it
+       just rests at the intro framing until asked. ──────────────────────────── */
+    var INTRO_ZOOM = 6.4;
+    var MAP = null;               // hoisted map handle for the message bridge
+    var MAP_READY = false;        // true once markers exist and load has fired
+    var interactionEnabled = false;
+    var played = false;           // the intro plays exactly once
+    var playPending = false;      // a "masar-play" that arrived before load
+    var revealMarkers = function () {}; // replaced once markers are built
+
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    // Re-enable panning/zoom (but never the scroll wheel — that would trap the
+    // page's scroll) and set the zoom floor. Deliberately does NOT re-apply
+    // maxBounds: the intro eases to HEBRON_DEFAULT_ZOOM and stops there, so any
+    // constraint that could nudge the camera afterwards would read as a snap.
+    function enableInteraction() {
+      if (!MAP || interactionEnabled) return;
+      interactionEnabled = true;
+      try { MAP.setMinZoom(HEBRON_MIN_ZOOM); } catch (e) {}
+      ["boxZoom", "dragRotate", "dragPan", "keyboard", "doubleClickZoom", "touchZoomRotate"]
+        .forEach(function (h) { try { MAP[h].enable(); } catch (e) {} });
+    }
+
+    // The one-shot intro: a smooth ease from the regional framing straight to
+    // the Hebron resting framing, then the staggered marker pop. The ease lands
+    // exactly where the map rests, so there is no jump into the "island" view.
+    function playIntro() {
+      if (played) return;
+      if (!MAP_READY) { playPending = true; return; }
+      played = true;
+      MAP.easeTo({
+        center: HEBRON_CENTER,
+        zoom: HEBRON_DEFAULT_ZOOM,
+        duration: 2200,
+        easing: easeInOutCubic,
+      });
+      MAP.once("moveend", function () {
+        enableInteraction();
+        revealMarkers(true);
+      });
+    }
+
+    window.addEventListener("message", function (ev) {
+      var d = ev && ev.data;
+      if (!d || typeof d !== "object") return;
+      if (d.type === "masar-play") playIntro();
+    });
+
     /* ── Defect glyphs (shape = defect type) ─────────────────────────────── */
     var TYPE_LABEL = {
       pothole: "حفرة", long: "شَقّ طولي", trans: "شَقّ عرضي",
@@ -408,12 +474,21 @@ return maplibregl$1;
           container: "map",
           style: style,
           center: HEBRON_CENTER,
-          zoom: HEBRON_DEFAULT_ZOOM,
-          minZoom: HEBRON_MIN_ZOOM,
+          // Boot at the regional intro framing; the page scrubs it in. No
+          // maxBounds yet (they'd clamp the zoomed-out view), and minZoom is
+          // pinned to the intro so it can't drift further out. Both are
+          // restored to the Hebron limits once the intro finishes.
+          zoom: INTRO_ZOOM,
+          minZoom: INTRO_ZOOM,
           maxZoom: HEBRON_MAX_ZOOM,
-          maxBounds: HEBRON_MAX_BOUNDS,
           attributionControl: false,
         });
+        MAP = map;
+
+        // The page owns the camera during the scroll intro — silence every
+        // user gesture until enableInteraction() runs at the reveal.
+        ["scrollZoom", "boxZoom", "dragRotate", "dragPan", "keyboard", "doubleClickZoom", "touchZoomRotate"]
+          .forEach(function (h) { try { map[h].disable(); } catch (e) {} });
 
         map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
         // Tile data attribution (CARTO + OpenStreetMap) — required for public use.
@@ -424,21 +499,34 @@ return maplibregl$1;
           map.addSource("hebron-mask", { type: "geojson", data: buildMask(boundary) });
           map.addLayer({
             id: "hebron-mask", type: "fill", source: "hebron-mask",
-            paint: { "fill-color": TERRAIN, "fill-opacity": 1 },
+            paint: {
+              "fill-color": TERRAIN,
+              // Fade the "world minus Hebron" beige in only near city zoom, so
+              // the zoomed-out intro shows the real Palestine / Levant basemap.
+              "fill-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0, 11.5, 1],
+            },
           });
           map.addSource("hebron-boundary", { type: "geojson", data: boundary });
           map.addLayer({
             id: "hebron-outline", type: "line", source: "hebron-boundary",
-            paint: { "line-color": "#0E1312", "line-width": 1.5, "line-opacity": 0.25 },
+            paint: {
+              "line-color": "#0E1312", "line-width": 1.5,
+              "line-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0, 11.5, 0.25],
+            },
           });
 
-          // Defect markers + app-style popups
-          POINTS.forEach(function (p) {
+          // Defect markers + app-style popups. Built up front but held hidden
+          // (the .pop wrapper starts at scale 0); revealMarkers() pops them in.
+          var markerEls = [];
+          POINTS.forEach(function (p, idx) {
             var el = document.createElement("div");
             el.className = "masar-marker";
             el.setAttribute("role", "button");
             el.setAttribute("aria-label", (TYPE_LABEL[p.type] || "تلف") + " · " + p.street);
-            el.innerHTML = '<span class="disc">' + glyphSVG(p.type, 14, "#0E1312") + "</span>";
+            el.innerHTML = '<span class="pop"><span class="disc">' + glyphSVG(p.type, 14, "#0E1312") + "</span></span>";
+            // Stagger the pop-in so the dots cascade across the map.
+            el.querySelector(".pop").style.transitionDelay = (idx * 22) + "ms";
+            markerEls.push(el);
 
             var popup = new maplibregl.Popup({
               offset: 20, closeButton: false, maxWidth: "284px", className: "masar-popup",
@@ -457,6 +545,16 @@ return maplibregl$1;
               .setPopup(popup)
               .addTo(map);
           });
+
+          revealMarkers = function (on) {
+            markerEls.forEach(function (el) { el.classList.toggle("is-revealed", !!on); });
+          };
+
+          MAP_READY = true;
+          if (playPending) playIntro();
+          // Ready handshake: if the page asked to play before we booted, it
+          // re-sends "masar-play" when it hears this.
+          try { window.parent.postMessage({ type: "masar-ready" }, "*"); } catch (e) {}
         });
       });
   })();
