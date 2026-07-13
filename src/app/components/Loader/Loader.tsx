@@ -96,47 +96,27 @@ export default function Loader() {
       intro.fromTo(
         frame,
         { autoAlpha: 0, scale: 1.4 },
-        { autoAlpha: 1, scale: 1.2, duration: 0.45, ease: "power3.out" },
+        { autoAlpha: 1, scale: 1, duration: 0.45, ease: "power3.out" },
         0.6
       );
       intro.to(label, { autoAlpha: 1, duration: 0.3 }, 0.7);
 
-      // The frame doesn't snap straight onto the pothole — it hunts for the
-      // lock like a CV detector refining its box: it starts big, then resizes
-      // smaller and drifts a little off to one side (not yet centred), then
-      // keeps shrinking and correcting side to side, closing in on the centre
-      // each pass until it settles precisely over the pothole and holds.
+      // The frame breathes as it locks onto the pothole — staying dead centred
+      // the whole time. It pulses: shrinking well in (−25% of the initial
+      // size), springing back out a touch (+5% over it), then repeating. Each
+      // shrink takes longer than the quicker spring back out, giving it a
+      // measured "closing in" feel before it settles.
       const lock = gsap.timeline({ delay: 1.05 });
-      // much smaller, drifts off to the right — a rough first guess
-      lock.to(
-        frame,
-        { scale: 1.15, x: 62, y: -26, duration: 0.5, ease: "power2.inOut" },
-        0
-      );
-      // smaller again, over-corrects to the left
-      lock.to(
-        frame,
-        { scale: 0.82, x: -42, y: 18, duration: 0.45, ease: "power2.inOut" },
-        0.62
-      );
-      // smaller still, closing in — a slight nudge back to the right
-      lock.to(
-        frame,
-        { scale: 0.62, x: 22, y: -9, duration: 0.4, ease: "power2.inOut" },
-        1.15
-      );
-      // one last fine correction — a tiny nudge back to the left
-      lock.to(
-        frame,
-        { scale: 0.7, x: -14, y: 7, duration: 0.38, ease: "power2.inOut" },
-        1.6
-      );
-      // locks tightly onto the pothole and holds
-      lock.to(
-        frame,
-        { scale: 0.65, x: 0, y: 0, duration: 0.4, ease: "power3.out" },
-        2.02
-      );
+      // shrink well in
+      lock.to(frame, { scale: 0.8, duration: 0.55, ease: "power2.inOut" }, 0);
+      // spring back out a touch (quicker)
+      lock.to(frame, { scale: 0.85, duration: 0.28, ease: "power2.out" }, 0.55);
+      // shrink in again
+      lock.to(frame, { scale: 0.65, duration: 0.55, ease: "power2.inOut" }, 0.83);
+      // spring back out a touch (quicker)
+      lock.to(frame, { scale: 0.7, duration: 0.28, ease: "power2.out" }, 1.38);
+      // shrink in one last time and settle, centred over the pothole
+      lock.to(frame, { scale: 0.5, duration: 0.55, ease: "power3.out" }, 1.66);
 
       // The load progresses on a percentage readout counting to 100.00%.
       // Reaching 100% triggers the reveal.
@@ -175,9 +155,9 @@ export default function Loader() {
             { backgroundColor: "rgba(52,168,216,0)", duration: 0.3 },
             0
           );
-          // The frame settled tight at scale 0.5; expand it back to full scale
+          // The frame settled tight below full scale; expand it back to scale 1
           // as it grows so the box opens all the way out to the viewport edges
-          // (the shadowWindow stays at scale 1, so scale:1 is a no-op for it).
+          // in step with the dark window (now matched to the same start scale).
           out.to(
             [shadowWindow, frame],
             {
