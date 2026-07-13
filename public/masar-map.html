@@ -320,6 +320,9 @@ return maplibregl$1;
       MAP.once("moveend", function () {
         enableInteraction();
         revealMarkers(true);
+        // Tell the embedding page the one-shot intro is over, so it can unlock
+        // controls (e.g. the device toggle) that were held during the zoom-in.
+        try { window.parent.postMessage({ type: "masar-done" }, "*"); } catch (e) {}
       });
     }
 
