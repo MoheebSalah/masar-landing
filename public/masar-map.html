@@ -288,6 +288,31 @@ return maplibregl$1;
     var playPending = false;      // a "masar-play" that arrived before load
     var revealMarkers = function () {}; // replaced once markers are built
 
+    // The embedding page renders the map at full desktop size and crops it with
+    // a device frame. When it switches devices it tells us how far the visible
+    // window is inset from the map edges so we can slide the on-map controls
+    // (zoom + attribution) back into that visible corner.
+    var insetX = 0, insetY = 0;
+    var CTRL_PAD = 12; // extra breathing room from the visible device edge
+    function applyInset(x, y) {
+      insetX = x; insetY = y;
+      var px = x + (x > 0 ? CTRL_PAD : 0), py = y + (y > 0 ? CTRL_PAD : 0);
+      var tl = document.querySelector(".maplibregl-ctrl-top-left");
+      var br = document.querySelector(".maplibregl-ctrl-bottom-right");
+      if (tl) tl.style.transform = "translate(" + px + "px," + py + "px)";
+      if (br) br.style.transform = "translate(" + (-px) + "px," + (-py) + "px)";
+    }
+
+    // Each device reframes the map to its own zoom: the phone eases in to a
+    // street-level view, the desktop stays on the wide regional framing. Held
+    // until the intro has landed so it can't fight the zoom-in.
+    var pendingZoom = null;
+    function setDeviceZoom(z) {
+      if (typeof z !== "number") return;
+      if (!MAP || !MAP_READY || !played) { pendingZoom = z; return; }
+      MAP.easeTo({ zoom: z, duration: 700, easing: easeInOutCubic });
+    }
+
     function easeInOutCubic(t) {
       return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
@@ -323,6 +348,8 @@ return maplibregl$1;
         // Tell the embedding page the one-shot intro is over, so it can unlock
         // controls (e.g. the device toggle) that were held during the zoom-in.
         try { window.parent.postMessage({ type: "masar-done" }, "*"); } catch (e) {}
+        // Honour a device zoom that was requested while the intro was still running.
+        if (pendingZoom != null) { var z = pendingZoom; pendingZoom = null; setDeviceZoom(z); }
       });
     }
 
@@ -330,6 +357,8 @@ return maplibregl$1;
       var d = ev && ev.data;
       if (!d || typeof d !== "object") return;
       if (d.type === "masar-play") playIntro();
+      if (d.type === "masar-inset") applyInset(d.x || 0, d.y || 0);
+      if (d.type === "masar-zoom") setDeviceZoom(d.zoom);
     });
 
     /* ── Defect glyphs (shape = defect type) ─────────────────────────────── */
@@ -520,6 +549,8 @@ return maplibregl$1;
         map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
         // Tile data attribution (CARTO + OpenStreetMap) — required for public use.
         map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+        // Re-apply any inset the page already sent (device chosen before boot).
+        applyInset(insetX, insetY);
 
         map.on("load", function () {
           // City-island mask + boundary outline

@@ -27,6 +27,10 @@ const BEZEL = 12; // matches the p-3 padding on the device body
 // Tablet / phone screen height as a fraction of the desktop's, so they read as
 // smaller devices sitting next to the full-size monitor.
 const REL: Record<Device, number> = { desktop: 1, tablet: 0.86, phone: 0.92 };
+// The map re-frames to a device-appropriate zoom on each switch, so it reads as
+// a real reframe rather than a crop: the desktop keeps the wide regional view,
+// the phone eases in to a street-level one. Stays inside the map's 11.5–18 range.
+const ZOOM: Record<Device, number> = { desktop: 12.6, tablet: 13.4, phone: 14.2 };
 
 // The desktop is the reference: it fills the whole stage, just like the
 // original full-bleed map. Tablet and phone keep their own aspect but are
@@ -76,15 +80,30 @@ export default function Map() {
     gsap.set(standRef.current, { autoAlpha: 1 });
     gsap.set(notchRef.current, { autoAlpha: 0 });
 
+    const post = (msg: Record<string, unknown>) =>
+      iframe.contentWindow?.postMessage(msg, "*");
+
+    // Tell the map how far the visible window is inset from the map edges, so it
+    // can slide its on-map controls (zoom + attribution) into the visible
+    // corner. The frame is centred in the stage, so the inset is just half the
+    // gap between them — which the map's fixed bezel cancels out.
+    const postInset = (frameW: number, frameH: number) =>
+      post({ type: "masar-inset", x: (stage.clientWidth - frameW) / 2, y: (stage.clientHeight - frameH) / 2 });
+
     const measure = () => {
-      const dims = fitBody(deviceRef.current, stage.clientWidth, stage.clientHeight);
+      const boxW = stage.clientWidth;
+      const boxH = stage.clientHeight;
+      const dims = fitBody(deviceRef.current, boxW, boxH);
       gsap.set(frame, { width: dims.w, height: dims.h });
+      // The map renders once at the full desktop-screen size and stays centred
+      // in the stage; the frame just crops it. Keeping it a fixed size means the
+      // map never resizes or re-renders while the frame morphs, so the switch is
+      // a pure GPU crop with zero map churn.
+      gsap.set(iframe, { width: boxW - BEZEL * 2, height: boxH - BEZEL * 2 });
+      postInset(dims.w, dims.h);
     };
     measure();
     window.addEventListener("resize", measure);
-
-    const post = (msg: Record<string, unknown>) =>
-      iframe.contentWindow?.postMessage(msg, "*");
 
     // Fire the intro exactly once, the first time the map reaches the centre of
     // the viewport, and lock the toggle until the map says the zoom is done.
@@ -102,8 +121,13 @@ export default function Map() {
       if (e.source !== iframe.contentWindow) return;
       const type = (e.data as { type?: string })?.type;
       // If the section is centred before the map finishes booting, it replays
-      // this handshake so the intro still fires once it's ready.
-      if (type === "masar-ready" && playedRef.current) post({ type: "masar-play" });
+      // this handshake so the intro still fires once it's ready. Also re-sync the
+      // control inset in case a device was chosen before the map came up.
+      if (type === "masar-ready") {
+        if (playedRef.current) post({ type: "masar-play" });
+        const dims = fitBody(deviceRef.current, stage.clientWidth, stage.clientHeight);
+        postInset(dims.w, dims.h);
+      }
       if (type === "masar-done") {
         window.clearTimeout(unlockTimer);
         setAnimating(false);
@@ -171,9 +195,9 @@ export default function Map() {
     return () => ctx.revert();
   }, []);
 
-  // Morph the frame to the chosen device. The iframe fills the screen, so its
-  // own window resizes with it and the map re-fits automatically. Blocked while
-  // the intro is playing.
+  // Morph the frame to the chosen device. The map stays a fixed-size, centred
+  // element and the frame simply crops more or less of it — no map resize, so
+  // the switch is smooth. Blocked while the intro is playing.
   const changeDevice = (next: Device) => {
     if (next === deviceRef.current || animating) return;
     const stage = stageRef.current;
@@ -186,12 +210,24 @@ export default function Map() {
     const dims = fitBody(next, stage.clientWidth, stage.clientHeight);
     const meta = DEVICES[next];
     const ease = "power3.inOut";
+    const post = (msg: Record<string, unknown>) =>
+      iframeRef.current?.contentWindow?.postMessage(msg, "*");
+    // Reframe the map camera to this device's zoom (the map eases it itself).
+    post({ type: "masar-zoom", zoom: ZOOM[next] });
     gsap.to(frame, {
       width: dims.w,
       height: dims.h,
       borderRadius: meta.radius,
       duration: 0.7,
       ease,
+      // Slide the on-map controls to the new corner in lockstep with the frame
+      // edge, reading the live size each frame so they track it exactly.
+      onUpdate: () =>
+        post({
+          type: "masar-inset",
+          x: (stage.clientWidth - frame.offsetWidth) / 2,
+          y: (stage.clientHeight - frame.offsetHeight) / 2,
+        }),
     });
     gsap.to(screenRef.current, {
       borderRadius: meta.screenRadius,
@@ -258,7 +294,8 @@ export default function Map() {
           ref={frameRef}
           className="relative bg-dark p-3 "
         >
-          {/* Screen */}
+          {/* Screen — a fixed-size, centred map that this window crops as it
+              morphs. The iframe never resizes, so the map stays perfectly still. */}
           <div
             ref={screenRef}
             className="relative h-full w-full overflow-hidden bg-background"
@@ -267,7 +304,7 @@ export default function Map() {
               ref={iframeRef}
               src="/masar-map.html"
               title="خريطة مسار للحُفر في الخليل"
-              className="block h-full w-full border-0"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-0"
             />
           </div>
 
