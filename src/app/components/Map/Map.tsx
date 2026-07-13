@@ -111,9 +111,11 @@ export default function Map() {
     };
     window.addEventListener("message", onMessage);
 
+    // Hold the intro until the whole map window is on screen — fire the moment
+    // the frame's bottom border reaches the bottom of the viewport.
     const st = ScrollTrigger.create({
-      trigger: stage,
-      start: "center center",
+      trigger: frame,
+      start: "bottom bottom",
       onEnter: play,
       onEnterBack: play,
     });
