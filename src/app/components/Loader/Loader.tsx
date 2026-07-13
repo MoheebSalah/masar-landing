@@ -50,12 +50,17 @@ export default function Loader() {
     const html = document.documentElement;
     const prevOverflow = html.style.overflow;
     const prevGutter = html.style.scrollbarGutter;
+    const prevBackground = html.style.background;
     // Keep the scrollbar's space reserved while overflow is hidden. Without
     // this the viewport gets a scrollbar-width wider during the loader, and
     // ScrollTrigger pins measured in that window keep the stale width —
     // leaving a horizontal overflow once the scrollbar returns.
     html.style.scrollbarGutter = "stable";
     html.style.overflow = "hidden";
+    // The reserved gutter shows the html background (browser-default white) as
+    // a strip beside the loader. Paint it the loader's dark so it blends in
+    // until the real scrollbar returns at the reveal.
+    html.style.background = "#0E1312";
     window.scrollTo(0, 0);
 
     // overflow:hidden doesn't stop Lenis — it drives its own wheel-based
@@ -74,6 +79,7 @@ export default function Loader() {
       const finish = () => {
         html.style.overflow = prevOverflow;
         html.style.scrollbarGutter = prevGutter;
+        html.style.background = prevBackground;
         cancelAnimationFrame(lockRaf);
         getLenis()?.start();
         // Pinned sections measured themselves while the scrollbar was
@@ -82,6 +88,50 @@ export default function Loader() {
         ScrollTrigger.refresh();
         signalLoaderDone();
         setDone(true);
+      };
+
+      // Reveal: the pothole and readout fade while the frame's inside clears
+      // and the square grows into a window onto the page beneath. Fired the
+      // instant the detection box settles, so the loader exits the moment the
+      // animation lands instead of idling on a full progress bar.
+      const reveal = () => {
+        const cover = Math.max(window.innerWidth, window.innerHeight) * 1.02;
+        // The frame settled smaller than full scale during the lock; match the
+        // dark window to that same scale now so the dark cutout lines up exactly
+        // with the detection box before they grow out together.
+        gsap.set(shadowWindow, {
+          scale: gsap.getProperty(frame, "scale") as number,
+        });
+        const out = gsap.timeline({ onComplete: finish });
+        out.to(pothole, { autoAlpha: 0, duration: 0.5, ease: "power1.out" }, 0);
+        out.to(label, { autoAlpha: 0, duration: 0.25 }, 0);
+        out.to(
+          shadowWindow,
+          { backgroundColor: "rgba(14,19,18,0)", duration: 0.3 },
+          0
+        );
+        // Clear the frame's primary fill too, so the growing box becomes a
+        // clean window onto the page rather than tinting it primary.
+        out.to(
+          frame,
+          { backgroundColor: "rgba(52,168,216,0)", duration: 0.3 },
+          0
+        );
+        // The frame settled tight below full scale; expand it back to scale 1
+        // as it grows so the box opens all the way out to the viewport edges
+        // in step with the dark window (now matched to the same start scale).
+        out.to(
+          [shadowWindow, frame],
+          {
+            width: cover,
+            height: cover,
+            scale: 1,
+            duration: 1.0,
+            ease: "power4.inOut",
+          },
+          0
+        );
+        out.to(frame, { autoAlpha: 0, duration: 0.35 }, 0.7);
       };
 
       // Intro: the pothole emerges on the dark stage and the detection frame
@@ -105,8 +155,9 @@ export default function Loader() {
       // the whole time. It pulses: shrinking well in (−25% of the initial
       // size), springing back out a touch (+5% over it), then repeating. Each
       // shrink takes longer than the quicker spring back out, giving it a
-      // measured "closing in" feel before it settles.
-      const lock = gsap.timeline({ delay: 1.05 });
+      // measured "closing in" feel before it settles. The moment it settles,
+      // the reveal fires — this is what ends the loader.
+      const lock = gsap.timeline({ delay: 1.05, onComplete: reveal });
       // shrink well in
       lock.to(frame, { scale: 0.8, duration: 0.55, ease: "power2.inOut" }, 0);
       // spring back out a touch (quicker)
@@ -118,58 +169,16 @@ export default function Loader() {
       // shrink in one last time and settle, centred over the pothole
       lock.to(frame, { scale: 0.5, duration: 0.55, ease: "power3.out" }, 1.66);
 
-      // The load progresses on a percentage readout counting to 100.00%.
-      // Reaching 100% triggers the reveal.
+      // The percentage readout counts to 100.00%, landing exactly as the box
+      // settles so it reads complete the moment the reveal begins.
       const counter = { val: 0 };
       gsap.to(counter, {
         val: 100,
-        duration: 3.6,
-        delay: 1.0,
+        duration: 2.15,
+        delay: 1.05,
         ease: "power1.inOut",
         onUpdate: () => {
           percent.textContent = counter.val.toFixed(2).padStart(5, "0") + "%";
-        },
-        onComplete: () => {
-          const cover =
-            Math.max(window.innerWidth, window.innerHeight) * 1.02;
-          // The frame settled smaller than full scale during the lock; match
-          // the dark window to that same scale now so the dark cutout lines up
-          // exactly with the detection box before they grow out together.
-          gsap.set(shadowWindow, {
-            scale: gsap.getProperty(frame, "scale") as number,
-          });
-          // Reveal: the pothole and readout fade while the frame's inside
-          // clears and the square grows into a window onto the page beneath.
-          const out = gsap.timeline({ onComplete: finish });
-          out.to(pothole, { autoAlpha: 0, duration: 0.6, ease: "power1.out" }, 0);
-          out.to(label, { autoAlpha: 0, duration: 0.25 }, 0);
-          out.to(
-            shadowWindow,
-            { backgroundColor: "rgba(14,19,18,0)", duration: 0.3 },
-            0
-          );
-          // Clear the frame's primary fill too, so the growing box becomes a
-          // clean window onto the page rather than tinting it primary.
-          out.to(
-            frame,
-            { backgroundColor: "rgba(52,168,216,0)", duration: 0.3 },
-            0
-          );
-          // The frame settled tight below full scale; expand it back to scale 1
-          // as it grows so the box opens all the way out to the viewport edges
-          // in step with the dark window (now matched to the same start scale).
-          out.to(
-            [shadowWindow, frame],
-            {
-              width: cover,
-              height: cover,
-              scale: 1,
-              duration: 1.15,
-              ease: "power4.inOut",
-            },
-            0
-          );
-          out.to(frame, { autoAlpha: 0, duration: 0.35 }, 0.85);
         },
       });
     }, overlay);
@@ -177,6 +186,7 @@ export default function Loader() {
     return () => {
       html.style.overflow = prevOverflow;
       html.style.scrollbarGutter = prevGutter;
+      html.style.background = prevBackground;
       cancelAnimationFrame(lockRaf);
       getLenis()?.start();
       ctx.revert();
