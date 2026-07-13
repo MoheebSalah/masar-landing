@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { signalLoaderDone } from "./loaderSignal";
+import { getLenis } from "../SmoothScroll/lenisInstance";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -57,10 +58,24 @@ export default function Loader() {
     html.style.overflow = "hidden";
     window.scrollTo(0, 0);
 
+    // overflow:hidden doesn't stop Lenis — it drives its own wheel-based
+    // scroll — so pause it too and keep the visitor on the hero. Lenis is
+    // created in the parent SmoothScroll effect, which runs after this child
+    // effect, so retry on the next frame until the instance exists.
+    let lockRaf = 0;
+    const lockScroll = () => {
+      const lenis = getLenis();
+      if (lenis) lenis.stop();
+      else lockRaf = requestAnimationFrame(lockScroll);
+    };
+    lockScroll();
+
     const ctx = gsap.context(() => {
       const finish = () => {
         html.style.overflow = prevOverflow;
         html.style.scrollbarGutter = prevGutter;
+        cancelAnimationFrame(lockRaf);
+        getLenis()?.start();
         // Pinned sections measured themselves while the scrollbar was
         // hidden; re-measure now that it's back, or they end up a
         // scrollbar-width too wide (horizontal overflow).
@@ -137,6 +152,12 @@ export default function Loader() {
         onComplete: () => {
           const cover =
             Math.max(window.innerWidth, window.innerHeight) * 1.02;
+          // The frame settled smaller than full scale during the lock; match
+          // the dark window to that same scale now so the dark cutout lines up
+          // exactly with the detection box before they grow out together.
+          gsap.set(shadowWindow, {
+            scale: gsap.getProperty(frame, "scale") as number,
+          });
           // Reveal: the pothole and readout fade while the frame's inside
           // clears and the square grows into a window onto the page beneath.
           const out = gsap.timeline({ onComplete: finish });
@@ -176,6 +197,8 @@ export default function Loader() {
     return () => {
       html.style.overflow = prevOverflow;
       html.style.scrollbarGutter = prevGutter;
+      cancelAnimationFrame(lockRaf);
+      getLenis()?.start();
       ctx.revert();
       ScrollTrigger.refresh();
     };

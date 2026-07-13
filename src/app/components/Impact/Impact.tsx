@@ -22,6 +22,8 @@ const N = STATS.length;
 export default function Impact() {
   const sectionRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<ScrollTrigger | null>(null);
+  const eyebrowRef = useRef<HTMLParagraphElement>(null);
+  const bulletRowRef = useRef<HTMLDivElement>(null);
   // Which stat is on screen (0…N-1); driven by the sticky scroll position.
   const [step, setStep] = useState(0);
 
@@ -44,6 +46,33 @@ export default function Impact() {
           setStep((prev) => (prev === idx ? prev : idx));
         },
       });
+    }, section);
+
+    return () => ctx.revert();
+  }, []);
+
+  // As the section first arrives, the eyebrow rises in and the bullet + its
+  // arrow slide in from the right, alongside the number counting up.
+  useEffect(() => {
+    const section = sectionRef.current;
+    const eyebrow = eyebrowRef.current;
+    const bulletRow = bulletRowRef.current;
+    if (!section || !eyebrow || !bulletRow) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.set(eyebrow, { autoAlpha: 0, y: 24 });
+      gsap.set(bulletRow, { autoAlpha: 0, x: 90 });
+
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: section, start: "top 20%", once: true },
+      });
+      tl.to(eyebrow, { autoAlpha: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0)
+        .to(
+          bulletRow,
+          { autoAlpha: 1, x: 0, duration: 0.8, ease: "power3.out" },
+          0.2
+        );
     }, section);
 
     return () => ctx.revert();
@@ -74,7 +103,7 @@ export default function Impact() {
             its right (start) edge so the number and bullet share a right edge. */}
         <div className="w-full max-w-375 px-8">
           {/* Eyebrow — quiet context above the number */}
-          <p className="mb-6 font-sans text-t2 text-subtext">
+          <p ref={eyebrowRef} className="mb-6 font-sans text-t2 text-subtext">
             أرقامٌ تعكس أثراً ملموساً
           </p>
 
@@ -90,7 +119,7 @@ export default function Impact() {
 
           {/* Bullet + title, sharing the number's right edge (bullet first, so
               in RTL it sits on the right with the title flowing left). */}
-          <div className="mt-6 flex items-center gap-5">
+          <div ref={bulletRowRef} className="mt-6 flex items-center gap-5">
             <ArrowBullet className="h-10 w-auto shrink-0 text-primary" />
             <RollingTitle title={stat.title} step={step} />
           </div>

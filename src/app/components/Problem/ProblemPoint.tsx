@@ -16,7 +16,7 @@ export default function ProblemPoint({
       <button
         type="button"
         onClick={onSelect}
-        className={`font-heading text-[6rem] leading-[1.05] transition-colors duration-300 ${
+        className={`cursor-pointer font-heading text-[6rem] leading-[1.05] transition-colors duration-300 ${
           active ? "text-primary" : "text-muted hover:text-subtext"
         }`}
       >

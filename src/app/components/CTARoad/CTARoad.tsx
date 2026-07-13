@@ -37,29 +37,53 @@ export default function CTARoad() {
         defaults: { ease: "power2.out" },
       });
       tl.from(".cta-road-copy", { y: 40, opacity: 0, duration: 0.8 }, 0);
-      // The asphalt draws in first; each status stop pops as the road
-      // reaches it, then the lane dashes and the button arrive at the end.
-      tl.from(
-        ".road-surface",
-        { strokeDashoffset: 1, duration: 1.6, ease: "power2.inOut" },
-        0.2,
+
+      // 1. The asphalt is wiped in first, right→left. A clip wipe (rather than a
+      //    round-capped dash draw) keeps it smooth — no dot popping in at the
+      //    start and no end-cap snapping in at the finish.
+      tl.fromTo(
+        ".road-surface-rect",
+        { attr: { x: 1200, width: 0 } },
+        { attr: { x: 240, width: 960 }, duration: 1.4, ease: "power2.inOut" },
+        0.3,
       );
-      tl.from(
-        ".road-marker",
-        {
-          scale: 0,
-          transformOrigin: "50% 50%",
-          duration: 0.5,
-          ease: "back.out(2.5)",
-          stagger: 0.4,
-        },
-        0.65,
+
+      // 2. The lane lines are then wiped in along the road from the right
+      //    (start) to the end. The reveal rect stays anchored at the right
+      //    edge (width tracks its left edge) so the dashes appear in order;
+      //    the CSS dash-march keeps running underneath the whole time.
+      const revealStart = 1.7;
+      const revealDur = 1.5;
+      tl.fromTo(
+        ".road-reveal-rect",
+        { attr: { x: 1200, width: 0 } },
+        { attr: { x: 240, width: 960 }, duration: revealDur, ease: "none" },
+        revealStart,
       );
-      tl.from(".road-centerline", { opacity: 0, duration: 0.6 }, 1.7);
+
+      // Each status stop pops exactly as the wipe reaches its spot on the road.
+      const markerAt = (x: number) =>
+        revealStart + ((1200 - x) / 960) * revealDur;
+      const popMarker = (id: string, x: number) =>
+        tl.from(
+          id,
+          {
+            scale: 0,
+            transformOrigin: "50% 50%",
+            duration: 0.45,
+            ease: "back.out(2.5)",
+          },
+          markerAt(x),
+        );
+      popMarker("#road-marker-detect", 1120);
+      popMarker("#road-marker-repair", 810);
+      popMarker("#road-marker-proof", 470);
+
+      // 3. Once the road is fully laid, the demo button arrives at the end.
       tl.from(
         ".road-cta",
         { opacity: 0, scale: 0.85, duration: 0.6, ease: "back.out(1.8)" },
-        1.9,
+        revealStart + revealDur,
       );
     }, section);
 
@@ -70,7 +94,7 @@ export default function CTARoad() {
     <section
       ref={sectionRef}
       id="cta-road"
-      className="relative w-full overflow-hidden bg-background py-28"
+      className="relative z-10 -mb-8 w-full overflow-hidden rounded-b-brand bg-background py-28"
     >
       <div className="px-32">
         <div className="cta-road-copy text-center">
@@ -92,26 +116,38 @@ export default function CTARoad() {
             fill="none"
             aria-hidden="true"
           >
-            {/* Asphalt — GSAP draws it in via dashoffset (pathLength=1) */}
+            {/* Each layer is revealed through its own wipe rect: GSAP opens it
+                from the right edge leftward. Default full-open so reduced-motion
+                (which skips the tweens) shows everything. */}
+            <defs>
+              <clipPath id="road-surface-reveal" clipPathUnits="userSpaceOnUse">
+                <rect className="road-surface-rect" x={0} y={0} width={1200} height={260} />
+              </clipPath>
+              <clipPath id="road-reveal" clipPathUnits="userSpaceOnUse">
+                <rect className="road-reveal-rect" x={0} y={0} width={1200} height={260} />
+              </clipPath>
+            </defs>
+
+            {/* Asphalt — wiped in smoothly via its reveal clip */}
             <path
               d={ROAD_PATH}
-              pathLength={1}
-              strokeDasharray="1"
-              strokeDashoffset="0"
               className="road-surface stroke-text"
               strokeWidth={34}
               strokeLinecap="round"
+              clipPath="url(#road-surface-reveal)"
             />
-            {/* Lane dashes — march toward the button (see globals.css) */}
+            {/* Lane dashes — march toward the button (see globals.css), wiped
+                in along the road via the reveal clip. */}
             <path
               d={ROAD_PATH}
               strokeDasharray="14 22"
               className="road-centerline road-dash stroke-text-dark"
               strokeWidth={3}
+              clipPath="url(#road-reveal)"
             />
 
             {/* رصد — where the damage is detected */}
-            <g className="road-marker">
+            <g id="road-marker-detect" className="road-marker">
               <circle cx={1120} cy={180} r={18} className="fill-negative/25" />
               <circle cx={1120} cy={180} r={8} className="fill-negative" />
               <text
@@ -125,7 +161,7 @@ export default function CTARoad() {
             </g>
 
             {/* الإصلاح — the crest of the road */}
-            <g className="road-marker">
+            <g id="road-marker-repair" className="road-marker">
               <circle cx={810} cy={96} r={18} className="fill-notice/25" />
               <circle cx={810} cy={96} r={8} className="fill-notice" />
               <text
@@ -139,7 +175,7 @@ export default function CTARoad() {
             </g>
 
             {/* إثبات الإصلاح — the last stop before the destination */}
-            <g className="road-marker">
+            <g id="road-marker-proof" className="road-marker">
               <circle cx={470} cy={180} r={18} className="fill-success/25" />
               <circle cx={470} cy={180} r={8} className="fill-success" />
               <text
@@ -167,16 +203,19 @@ export default function CTARoad() {
                 }`}
               >
                 {/* On click the navigation arrow launches: the resting arrow
-                    lifts away up-right while a fresh one flies in from below. */}
+                    lifts away up-right while a fresh one flies in from below.
+                    The transition is only armed while launching, so the reset
+                    to rest snaps instantly instead of the arrow drifting back
+                    down from the top. */}
                 <span className="relative block h-5 w-4.5 overflow-hidden">
                   <svg
                     width="18"
                     height="20"
                     viewBox="0 0 19 21"
                     fill="none"
-                    className={`absolute inset-0 transition-all duration-300 ease-out ${
+                    className={`absolute inset-0 ${
                       launching
-                        ? "-translate-y-6 translate-x-2 opacity-0"
+                        ? "-translate-y-6 translate-x-2 opacity-0 transition-all duration-300 ease-out"
                         : "translate-x-0 translate-y-0 opacity-100"
                     }`}
                     aria-hidden="true"
@@ -191,9 +230,9 @@ export default function CTARoad() {
                     height="20"
                     viewBox="0 0 19 21"
                     fill="none"
-                    className={`absolute inset-0 transition-all duration-300 ease-out ${
+                    className={`absolute inset-0 ${
                       launching
-                        ? "translate-x-0 translate-y-0 opacity-100"
+                        ? "translate-x-0 translate-y-0 opacity-100 transition-all duration-300 ease-out"
                         : "-translate-x-2 translate-y-6 opacity-0"
                     }`}
                     aria-hidden="true"

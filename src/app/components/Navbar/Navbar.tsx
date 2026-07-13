@@ -73,7 +73,7 @@ export default function Navbar() {
       <nav
         className={`nav-shell group flex items-center justify-between ${
           scrolled
-            ? "mt-4 h-10 w-100 rounded-2xl bg-white px-5 shadow-[0_10px_30px_-12px_rgba(14,19,18,0.25)] hover:bg-primary"
+            ? "mt-4 h-10 w-100 rounded-2xl bg-white px-5 hover:bg-primary"
             : "mt-0 h-24 w-full bg-transparent px-8 md:h-28 md:px-16 lg:px-32"
         }`}
       >

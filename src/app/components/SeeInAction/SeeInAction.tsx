@@ -49,6 +49,8 @@ export default function SeeInAction() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [cursorShown, setCursorShown] = useState(false);
+  // The real clip on screen — drives the indicator dots below the frame.
+  const [activeDot, setActiveDot] = useState(0);
 
   // Draw the track for a (possibly fractional) virtual position. Each slide is
   // a frame-sized copy centred by xPercent -50; adding signed × one viewport
@@ -150,6 +152,7 @@ export default function SeeInAction() {
 
     activeRef.current = toVirtual;
     const real = mod(toVirtual, VIDEOS.length);
+    setActiveDot(real);
     const arriving = videoRefs.current[real];
     if (arriving && inViewRef.current) arriving.play().catch(() => {});
 
@@ -167,6 +170,14 @@ export default function SeeInAction() {
   // Step one clip forward (+1: current slides left, next arrives from the
   // right) or back (-1). The virtual index loops, so it never runs out.
   const step = (dir: 1 | -1) => settle(activeRef.current + dir);
+
+  // Jump straight to a clip from the indicator dots. Resolve the nearest
+  // virtual index congruent to the target so the track takes the short way.
+  const goToDot = (real: number) => {
+    const current = activeRef.current;
+    const n = VIDEOS.length;
+    settle(real + n * Math.round((current - real) / n));
+  };
 
   // Trail the play/pause glyph on the pointer while it is over the stage.
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -192,9 +203,20 @@ export default function SeeInAction() {
         </p>
       </div>
 
-      {/* Video frame with edge navigation */}
+      {/* Video frame with the navigation arrows sitting outside it */}
       <div className="mx-auto w-full max-w-375 px-8">
-        <div className="relative">
+        {/* dir=ltr keeps the previous arrow on the left and next on the right */}
+        <div dir="ltr" className="flex items-center gap-4 md:gap-6">
+          {/* Previous clip — sits to the left of the video, no backdrop */}
+          <button
+            type="button"
+            aria-label="المقطع السابق"
+            onClick={() => step(-1)}
+            className="group shrink-0 cursor-pointer p-2"
+          >
+            <ChevronIcon className="h-10 w-10 text-primary transition-transform duration-300 group-hover:-translate-x-1.5" />
+          </button>
+
           {/* Stage: a fixed 16:9 frame the centre clip fills. It is NOT clipped
               — the leaving/arriving clips slide right across the screen and are
               clipped only at the viewport by the section's overflow. `z-0` makes
@@ -203,7 +225,7 @@ export default function SeeInAction() {
           <div
             ref={stageRef}
             dir="ltr"
-            className="relative z-0 aspect-video w-full cursor-none select-none"
+            className="relative z-0 aspect-video w-full flex-1 cursor-none select-none"
             onPointerMove={onPointerMove}
             onPointerLeave={() => setCursorShown(false)}
             onClick={togglePlay}
@@ -258,29 +280,34 @@ export default function SeeInAction() {
             </div>
           </div>
 
-          {/* Edge navigation: each button is the whole strip of space down one
-              side of the video. No background at rest — on hover a soft veil
-              fades in from that edge and the chevron nudges outward. The left
-              button steps to the previous clip, the right button to the next. */}
-          <button
-            type="button"
-            aria-label="المقطع السابق"
-            onClick={() => step(-1)}
-            className="group absolute inset-y-0 left-0 z-30 flex w-[16%] cursor-pointer items-center justify-start"
-          >
-            <span className="pointer-events-none absolute inset-0 rounded-l-2xl bg-linear-to-r from-dark/55 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <ChevronIcon className="relative h-12 w-12 text-primary drop-shadow-lg transition-transform duration-300 group-hover:-translate-x-1.5" />
-          </button>
-
+          {/* Next clip — sits to the right of the video, no backdrop */}
           <button
             type="button"
             aria-label="المقطع التالي"
             onClick={() => step(1)}
-            className="group absolute inset-y-0 right-0 z-30 flex w-[16%] cursor-pointer items-center justify-end"
+            className="group shrink-0 cursor-pointer p-2"
           >
-            <span className="pointer-events-none absolute inset-0 rounded-r-2xl bg-linear-to-l from-dark/55 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <ChevronIcon className="relative h-12 w-12 rotate-180 text-primary drop-shadow-lg transition-transform duration-300 group-hover:translate-x-1.5" />
+            <ChevronIcon className="h-10 w-10 rotate-180 text-primary transition-transform duration-300 group-hover:translate-x-1.5" />
           </button>
+        </div>
+
+        {/* Indicator: one dot per clip below the frame; the active one widens.
+            dir=ltr so the dots run in the same order as the arrows/slide. */}
+        <div dir="ltr" className="mt-8 flex justify-center gap-2.5">
+          {VIDEOS.map((src, i) => (
+            <button
+              key={src}
+              type="button"
+              aria-label={`المقطع ${i + 1}`}
+              aria-current={i === activeDot}
+              onClick={() => goToDot(i)}
+              className={`h-2.5 cursor-pointer rounded-full transition-all duration-300 ${
+                i === activeDot
+                  ? "w-7 bg-primary"
+                  : "w-2.5 bg-muted-dark hover:bg-subtext-dark"
+              }`}
+            />
+          ))}
         </div>
       </div>
     </section>

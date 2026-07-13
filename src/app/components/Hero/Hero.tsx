@@ -90,12 +90,10 @@ export default function Hero() {
         ref={contentRef}
         className="relative z-10 flex min-h-screen flex-col justify-end items-start px-8 pb-12 md:px-16 md:pb-16 lg:px-32 lg:pb-24"
       >
-        <div className="max-w-4xl text-right">
-          <h1 ref={headingRef} className="font-heading font-semibold text-[3.25rem] leading-[1.12] text-text-dark md:text-[5.5rem] lg:text-[7rem]">
-            <span className="block">من الحفرة إلى الإصلاح</span>
-            <span className="block">
-              <span className="text-primary">مسار</span> واضح
-            </span>
+        <div className="max-w-5xl text-right">
+          <h1 ref={headingRef} className="font-heading font-semibold text-[3.5rem] leading-[1.12] text-text-dark md:text-[5.75rem] lg:text-[7.25rem]">
+            <span className="block">سجّل <span className="text-primary">مسارك</span> كاملًا على الطريق</span>
+            <span className="block">لنرصد كل حفرة فيه</span>
           </h1>
           <p ref={subheadRef} className="mt-8 max-w-2xl font-sans text-t3 font-light leading-relaxed text-subtext-dark md:mt-10 md:text-t2 lg:text-t1">
             <span className="block">منصّة ذكية ترصد أضرار الطرق تلقائيًا</span>
