@@ -223,7 +223,7 @@ export default function Map() {
 
       {/* Device toggle — desktop, tablet, phone. Disabled while the intro plays. */}
       <div ref={toggleRef} className="mb-10 flex justify-center">
-        <div className="inline-flex items-center gap-1 rounded-full bg-white p-1.5 shadow-[0_12px_30px_-18px_rgba(14,19,18,0.4)]">
+        <div className="inline-flex items-center gap-1 rounded-full bg-white p-1.5 ">
           {ORDER.map((dev) => {
             const Icon = ICONS[dev];
             const isActive = device === dev;
@@ -256,7 +256,7 @@ export default function Map() {
         {/* Device body — GSAP drives its width, height and corner radius. */}
         <div
           ref={frameRef}
-          className="relative bg-dark p-3 shadow-[0_34px_70px_-34px_rgba(14,19,18,0.45)]"
+          className="relative bg-dark p-3 "
         >
           {/* Screen */}
           <div
