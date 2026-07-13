@@ -1,5 +1,6 @@
 import Loader from "./components/Loader/Loader";
 import Navbar from "./components/Navbar/Navbar";
+import SectionNav from "./components/SectionNav/SectionNav";
 import Hero from "./components/Hero/Hero";
 import Problem from "./components/Problem/Problem";
 import Solution from "./components/Solution/Solution";
@@ -17,6 +18,7 @@ export default function Home() {
     <main>
       <Loader />
       <Navbar />
+      <SectionNav />
       <Hero />
       <Problem />
       <Solution />
