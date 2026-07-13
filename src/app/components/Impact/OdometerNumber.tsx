@@ -75,24 +75,31 @@ export default function OdometerNumber({ value, prefix, suffix, step }: Props) {
       else gsap.set(w, { width: open ? natural : 0 });
     };
 
-    // First appearance: park every reel on the blank glyph (widths already set
-    // to their final columns) so the number is invisible, then roll it in like a
-    // mechanical odometer spinning up the moment it scrolls into view.
+    // First appearance: the number counts up from 0 to its value the moment it
+    // scrolls into view. The target's column widths are reserved up front and a
+    // leading "0" is shown, so it climbs in place (units spinning fastest) with
+    // no reflow. Sign and suffix are shown throughout.
     if (firstRun.current) {
       firstRun.current = false;
 
       roll(null, "sign", signIdx);
-      dIdx.forEach((idx, i) => {
-        roll(null, `d${i}`, 0);
-        openWidth(null, `d${i}`, idx !== 0);
-      });
-      roll(null, "suffix", 0);
+      dIdx.forEach((idx, i) => openWidth(null, `d${i}`, idx !== 0));
+      roll(null, "suffix", suffixIdx);
       openWidth(null, "suffix", suffixIdx !== 0);
+      digitIndices(0).forEach((idx, i) => roll(null, `d${i}`, idx));
 
+      const proxy = { v: 0 };
       const intro = gsap.timeline({ paused: true });
-      roll(intro, "sign", signIdx);
-      dIdx.forEach((idx, i) => roll(intro, `d${i}`, idx));
-      roll(intro, "suffix", suffixIdx);
+      intro.to(proxy, {
+        v: value,
+        duration: 1.6,
+        ease: "power2.out",
+        onUpdate: () => {
+          digitIndices(Math.round(proxy.v)).forEach((idx, i) =>
+            roll(null, `d${i}`, idx)
+          );
+        },
+      });
 
       let played = false;
       const io = new IntersectionObserver(

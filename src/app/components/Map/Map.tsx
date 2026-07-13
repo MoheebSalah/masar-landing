@@ -47,6 +47,9 @@ const fitBody = (device: Device, boxW: number, boxH: number) => {
 };
 
 export default function Map() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -123,6 +126,49 @@ export default function Map() {
     };
   }, []);
 
+  // Reveal on scroll: the heading + toggle rise in as the section arrives, then
+  // the device (with the map inside it) fades and scales up as the stage lands.
+  useEffect(() => {
+    const section = sectionRef.current;
+    const heading = headingRef.current;
+    const toggle = toggleRef.current;
+    const frame = frameRef.current;
+    const stage = stageRef.current;
+    if (!section || !heading || !toggle || !frame || !stage) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      const headingEls = Array.from(heading.children);
+      gsap.set(headingEls, { autoAlpha: 0, y: 24 });
+      gsap.set(toggle, { autoAlpha: 0, y: 20 });
+      gsap.set(frame, { autoAlpha: 0, y: 60, scale: 0.94 });
+
+      const top = gsap.timeline({
+        scrollTrigger: { trigger: section, start: "top 72%", once: true },
+      });
+      top
+        .to(headingEls, {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.7,
+          ease: "power3.out",
+          stagger: 0.12,
+        }, 0)
+        .to(toggle, { autoAlpha: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.25);
+
+      gsap.to(frame, {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.9,
+        ease: "power3.out",
+        scrollTrigger: { trigger: stage, start: "top 82%", once: true },
+      });
+    }, section);
+
+    return () => ctx.revert();
+  }, []);
+
   // Morph the frame to the chosen device. The iframe fills the screen, so its
   // own window resizes with it and the map re-fits automatically. Blocked while
   // the intro is playing.
@@ -162,10 +208,11 @@ export default function Map() {
 
   return (
     <section
+      ref={sectionRef}
       id="map-section"
       className="w-full bg-background px-8 py-24 md:px-16 lg:px-32"
     >
-      <div className="mb-8 text-center">
+      <div ref={headingRef} className="mb-8 text-center">
         <h2 className="font-heading text-heading text-text">خريطة الحُفر</h2>
         <p className="mx-auto mt-4 max-w-xl font-sans text-t2 text-subtext">
           كل حفرة على الخريطة بلاغ حقيقي — تنقّل بين شوارع الخليل كما يراها التطبيق.
@@ -173,7 +220,7 @@ export default function Map() {
       </div>
 
       {/* Device toggle — desktop, tablet, phone. Disabled while the intro plays. */}
-      <div className="mb-10 flex justify-center">
+      <div ref={toggleRef} className="mb-10 flex justify-center">
         <div className="inline-flex items-center gap-1 rounded-full bg-white p-1.5 shadow-[0_12px_30px_-18px_rgba(14,19,18,0.4)]">
           {ORDER.map((dev) => {
             const Icon = ICONS[dev];

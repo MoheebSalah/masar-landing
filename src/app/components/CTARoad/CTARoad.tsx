@@ -38,10 +38,13 @@ export default function CTARoad() {
       });
       tl.from(".cta-road-copy", { y: 40, opacity: 0, duration: 0.8 }, 0);
 
-      // 1. The asphalt draws in first, right→left, smoothly.
-      tl.from(
-        ".road-surface",
-        { strokeDashoffset: 1, duration: 1.4, ease: "power1.inOut" },
+      // 1. The asphalt is wiped in first, right→left. A clip wipe (rather than a
+      //    round-capped dash draw) keeps it smooth — no dot popping in at the
+      //    start and no end-cap snapping in at the finish.
+      tl.fromTo(
+        ".road-surface-rect",
+        { attr: { x: 1200, width: 0 } },
+        { attr: { x: 240, width: 960 }, duration: 1.4, ease: "power2.inOut" },
         0.3,
       );
 
@@ -113,24 +116,25 @@ export default function CTARoad() {
             fill="none"
             aria-hidden="true"
           >
-            {/* The lane dashes are revealed through this rect: GSAP wipes it
-                open from the right edge leftward. Default full-open so
-                reduced-motion (which skips the tween) shows the lines. */}
+            {/* Each layer is revealed through its own wipe rect: GSAP opens it
+                from the right edge leftward. Default full-open so reduced-motion
+                (which skips the tweens) shows everything. */}
             <defs>
+              <clipPath id="road-surface-reveal" clipPathUnits="userSpaceOnUse">
+                <rect className="road-surface-rect" x={0} y={0} width={1200} height={260} />
+              </clipPath>
               <clipPath id="road-reveal" clipPathUnits="userSpaceOnUse">
                 <rect className="road-reveal-rect" x={0} y={0} width={1200} height={260} />
               </clipPath>
             </defs>
 
-            {/* Asphalt — GSAP draws it in via dashoffset (pathLength=1) */}
+            {/* Asphalt — wiped in smoothly via its reveal clip */}
             <path
               d={ROAD_PATH}
-              pathLength={1}
-              strokeDasharray="1"
-              strokeDashoffset="0"
               className="road-surface stroke-text"
               strokeWidth={34}
               strokeLinecap="round"
+              clipPath="url(#road-surface-reveal)"
             />
             {/* Lane dashes — march toward the button (see globals.css), wiped
                 in along the road via the reveal clip. */}
