@@ -92,8 +92,8 @@ export default function Hero() {
       >
         <div className="max-w-5xl text-right">
           <h1 ref={headingRef} className="font-heading font-semibold text-[3.5rem] leading-[1.12] text-text-dark md:text-[5.75rem] lg:text-[7.25rem]">
-            <span className="block">سجّل <span className="text-primary">مسارك</span> على الطريق</span>
-            <span className="block">ونرصد كل حفرة على امتداده</span>
+            <span className="block">سجّل <span className="text-primary">مسارك</span> كاملًا على الطريق</span>
+            <span className="block">لنرصد كل حفرة فيه</span>
           </h1>
           <p ref={subheadRef} className="mt-8 max-w-2xl font-sans text-t3 font-light leading-relaxed text-subtext-dark md:mt-10 md:text-t2 lg:text-t1">
             <span className="block">منصّة ذكية ترصد أضرار الطرق تلقائيًا</span>

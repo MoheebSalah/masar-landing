@@ -38,13 +38,12 @@ export default function Map() {
     };
     window.addEventListener("message", onMessage);
 
-    // Pin the map when it sits centred in the viewport (equal gap above and
-    // below), and hold it there for a beat while the intro plays.
+    // Fire the intro when the map reaches the centre of the viewport. The map
+    // owns its own zoom + dot animation, so there's nothing to scrub — pinning
+    // here would just add a stretch of dead scroll, so we don't.
     const st = ScrollTrigger.create({
       trigger: mapWrap,
       start: "center center",
-      end: "+=1000",
-      pin: true,
       onEnter: play,
       onEnterBack: play,
     });

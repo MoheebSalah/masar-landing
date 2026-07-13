@@ -291,8 +291,9 @@ export default function SeeInAction() {
           </button>
         </div>
 
-        {/* Indicator: one dot per clip below the frame; the active one widens */}
-        <div className="mt-8 flex justify-center gap-2.5">
+        {/* Indicator: one dot per clip below the frame; the active one widens.
+            dir=ltr so the dots run in the same order as the arrows/slide. */}
+        <div dir="ltr" className="mt-8 flex justify-center gap-2.5">
           {VIDEOS.map((src, i) => (
             <button
               key={src}

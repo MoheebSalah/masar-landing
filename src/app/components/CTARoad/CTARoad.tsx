@@ -91,7 +91,7 @@ export default function CTARoad() {
     <section
       ref={sectionRef}
       id="cta-road"
-      className="relative w-full overflow-hidden bg-background py-28"
+      className="relative z-10 -mb-8 w-full overflow-hidden rounded-b-brand bg-background py-28"
     >
       <div className="px-32">
         <div className="cta-road-copy text-center">
