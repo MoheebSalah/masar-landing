@@ -49,19 +49,16 @@ export default function OdometerNumber({ value, prefix, suffix, step }: Props) {
 
     // One glyph's height drives the roll distance; all reels share it.
     const lineH = (firstDigit.children[0] as HTMLElement).clientHeight;
-    const animate = !firstRun.current;
-    firstRun.current = false;
 
     const signIdx = prefix === "-" ? 1 : 0;
     const suffixIdx = suffix === "%" ? 1 : 0;
     const dIdx = digitIndices(value);
-
-    const tl = animate ? gsap.timeline() : null;
     const DUR = 0.75;
     const EASE = "power3.inOut";
 
-    // Roll a reel so glyph `idx` sits in the window.
-    const roll = (id: string, idx: number) => {
+    // Roll a reel to glyph `idx`: queued onto `tl` when animating, set instantly
+    // when `tl` is null.
+    const roll = (tl: gsap.core.Timeline | null, id: string, idx: number) => {
       const el = strip(id);
       if (!el) return;
       if (tl) tl.to(el, { y: -idx * lineH, duration: DUR, ease: EASE }, 0);
@@ -69,7 +66,7 @@ export default function OdometerNumber({ value, prefix, suffix, step }: Props) {
     };
 
     // Open/close a column's width (0 when its glyph is blank) so the row recentres.
-    const openWidth = (id: string, open: boolean) => {
+    const openWidth = (tl: gsap.core.Timeline | null, id: string, open: boolean) => {
       const w = wrap(id);
       const s = strip(id);
       if (!w || !s) return;
@@ -78,16 +75,56 @@ export default function OdometerNumber({ value, prefix, suffix, step }: Props) {
       else gsap.set(w, { width: open ? natural : 0 });
     };
 
-    roll("sign", signIdx);
+    // First appearance: park every reel on the blank glyph (widths already set
+    // to their final columns) so the number is invisible, then roll it in like a
+    // mechanical odometer spinning up the moment it scrolls into view.
+    if (firstRun.current) {
+      firstRun.current = false;
+
+      roll(null, "sign", signIdx);
+      dIdx.forEach((idx, i) => {
+        roll(null, `d${i}`, 0);
+        openWidth(null, `d${i}`, idx !== 0);
+      });
+      roll(null, "suffix", 0);
+      openWidth(null, "suffix", suffixIdx !== 0);
+
+      const intro = gsap.timeline({ paused: true });
+      roll(intro, "sign", signIdx);
+      dIdx.forEach((idx, i) => roll(intro, `d${i}`, idx));
+      roll(intro, "suffix", suffixIdx);
+
+      let played = false;
+      const io = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting && !played) {
+            played = true;
+            intro.play();
+            io.disconnect();
+          }
+        },
+        { threshold: 0.4 }
+      );
+      io.observe(root);
+
+      return () => {
+        io.disconnect();
+        intro.kill();
+      };
+    }
+
+    // Later steps: roll straight from the current reels to the new value.
+    const tl = gsap.timeline();
+    roll(tl, "sign", signIdx);
     dIdx.forEach((idx, i) => {
-      roll(`d${i}`, idx);
-      openWidth(`d${i}`, idx !== 0);
+      roll(tl, `d${i}`, idx);
+      openWidth(tl, `d${i}`, idx !== 0);
     });
-    roll("suffix", suffixIdx);
-    openWidth("suffix", suffixIdx !== 0);
+    roll(tl, "suffix", suffixIdx);
+    openWidth(tl, "suffix", suffixIdx !== 0);
 
     return () => {
-      tl?.kill();
+      tl.kill();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);

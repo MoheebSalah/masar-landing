@@ -79,7 +79,14 @@ export default function Footer() {
     // Curtain reveal: this wrapper is a normal in-flow block that only clips.
     // The footer itself is fixed to the viewport bottom, so it never moves —
     // the page above scrolls away like a curtain lifting off of it.
-    <div ref={rootRef} className="relative h-screen [clip-path:inset(0)]">
+    <div
+      ref={rootRef}
+      /* One viewport tall + the CTA's 32px overlap (its -mb-8), so at the very
+         bottom the overlapping CTA scrolls fully off-screen and the footer shows
+         clean — while mid-scroll the overlap still lets the CTA's rounded corners
+         reveal the primary beneath. */
+      className="relative h-[calc(100vh+2rem)] [clip-path:inset(0)]"
+    >
       <footer className="fixed inset-x-0 bottom-0 h-screen overflow-hidden bg-primary px-32 pt-16 text-white">
         {/* Giant brand mark rising from behind the bottom edge — nearly as
             wide as the screen. Anchored by its TOP at a viewport-relative
