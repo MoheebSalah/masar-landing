@@ -198,7 +198,7 @@ export default function CTARoad() {
               <a
                 href="#contact"
                 onClick={handleLaunch}
-                className={`inline-flex items-center gap-2.75 whitespace-nowrap rounded-full bg-dark px-7.5 py-3.75 font-sans text-t3 font-extrabold text-text-dark shadow-[0_16px_32px_-16px_rgba(14,19,18,0.6)] transition-transform duration-300 hover:scale-105 ${
+                className={`inline-flex items-center gap-2.75 whitespace-nowrap rounded-full bg-dark px-7.5 py-3.75 font-sans text-t3 font-extrabold text-text-dark  transition-transform duration-300 hover:scale-105 ${
                   launching ? "cta-bounce" : ""
                 }`}
               >
