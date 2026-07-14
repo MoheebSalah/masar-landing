@@ -19,12 +19,23 @@ const STATS = [
 ];
 const N = STATS.length;
 
+// Above this scroll speed (px/s) the shown number is left untouched: a fast
+// flick (or a flick that passes straight through the section) crosses stats
+// faster than the 0.75s roll can finish, so instead of a mush of half-settled
+// reels the current number simply holds. Once the scroll slows below this, the
+// stat under the panel rolls in cleanly — i.e. the roll only plays on settle.
+const FAST_SCROLL_VELOCITY = 1800;
+
 export default function Impact() {
   const sectionRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<ScrollTrigger | null>(null);
   const eyebrowRef = useRef<HTMLParagraphElement>(null);
   const bulletRowRef = useRef<HTMLDivElement>(null);
-  // Which stat is on screen (0…N-1); driven by the sticky scroll position.
+  // True while a stat-dot click is scrolling programmatically, so the velocity
+  // gate is bypassed and that deliberate jump always rolls to its stat.
+  const navigatingRef = useRef(false);
+  // Which stat is on screen (0…N-1); driven by the sticky scroll position, but
+  // only advanced while the scroll is slow enough to settle (see onUpdate).
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -42,6 +53,10 @@ export default function Impact() {
         start: "top top",
         end: "bottom bottom",
         onUpdate: (self) => {
+          if (navigatingRef.current) return;
+          // Scrolling too fast to settle (a flick, or a jump passing straight
+          // through the section): hold the current number, no roll.
+          if (Math.abs(self.getVelocity()) > FAST_SCROLL_VELOCITY) return;
           const idx = Math.min(N - 1, Math.floor(self.progress * N));
           setStep((prev) => (prev === idx ? prev : idx));
         },
@@ -79,13 +94,24 @@ export default function Impact() {
   }, []);
 
   // Jump to the middle of stat `i`'s scroll segment so it lands on that number.
+  // The stat rolls in right away and the velocity-gated scroll updates are muted
+  // for the trip, so this deliberate click always plays a clean roll to `i`
+  // instead of the fast programmatic scroll being treated as an unsettled flick.
   const scrollToStep = (i: number) => {
     const st = triggerRef.current;
     if (!st) return;
     const target = st.start + ((i + 0.5) / N) * (st.end - st.start);
+    navigatingRef.current = true;
+    setStep((prev) => (prev === i ? prev : i));
+    const done = () => {
+      navigatingRef.current = false;
+    };
     const lenis = getLenis();
-    if (lenis) lenis.scrollTo(target, { duration: 1 });
-    else window.scrollTo({ top: target, behavior: "smooth" });
+    if (lenis) lenis.scrollTo(target, { duration: 1, onComplete: done });
+    else {
+      window.scrollTo({ top: target, behavior: "smooth" });
+      setTimeout(done, 1000);
+    }
   };
 
   const stat = STATS[step];
@@ -94,9 +120,9 @@ export default function Impact() {
     <section
       ref={sectionRef}
       id="impact"
-      /* h-[600vh] == 1.5 viewports of scroll per stat (STATS has 4). The sticky
+      /* h-[480vh] == 1.2 viewports of scroll per stat (STATS has 4). The sticky
          panel inside holds the number in place while these 4 screens pass. */
-      className="relative h-[600vh] w-full bg-background"
+      className="relative h-[520vh] w-full bg-background"
     >
       <div className="sticky top-0 flex h-screen flex-col items-center justify-center">
         {/* Content column matches the showcase width; everything is anchored to
