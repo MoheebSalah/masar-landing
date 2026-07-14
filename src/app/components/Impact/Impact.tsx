@@ -24,7 +24,7 @@ const N = STATS.length;
 // faster than the 0.75s roll can finish, so instead of a mush of half-settled
 // reels the current number simply holds. Once the scroll slows below this, the
 // stat under the panel rolls in cleanly — i.e. the roll only plays on settle.
-const FAST_SCROLL_VELOCITY = 4000;
+const FAST_SCROLL_VELOCITY = 1800;
 
 export default function Impact() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -120,9 +120,9 @@ export default function Impact() {
     <section
       ref={sectionRef}
       id="impact"
-      /* h-[600vh] == 1.5 viewports of scroll per stat (STATS has 4). The sticky
+      /* h-[320vh] == 0.8 viewport of scroll per stat (STATS has 4). The sticky
          panel inside holds the number in place while these 4 screens pass. */
-      className="relative h-[600vh] w-full bg-background"
+      className="relative h-[320vh] w-full bg-background"
     >
       <div className="sticky top-0 flex h-screen flex-col items-center justify-center">
         {/* Content column matches the showcase width; everything is anchored to
