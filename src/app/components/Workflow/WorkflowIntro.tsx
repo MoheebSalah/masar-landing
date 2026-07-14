@@ -73,9 +73,11 @@ export default function WorkflowIntro() {
       <div ref={leftRef}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/assets/Workflow/Workflow%200%20-%202.png"
+          src="/assets/Workflow/Workflow%200%20-%202.webp"
           alt=""
           aria-hidden="true"
+          loading="lazy"
+          decoding="async"
           className="h-62 w-110 rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
         />
       </div>
@@ -91,9 +93,11 @@ export default function WorkflowIntro() {
       <div ref={rightRef}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/assets/Workflow/Workflow%200%20-%201.png"
+          src="/assets/Workflow/Workflow%200%20-%201.webp"
           alt=""
           aria-hidden="true"
+          loading="lazy"
+          decoding="async"
           className="h-90 w-95 rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
         />
       </div>

@@ -12,9 +12,11 @@ export default function MapShotScreen({ dark, src }: Props) {
     <div className="relative h-[874px] w-[402px] overflow-hidden bg-(--sv-bg)">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`${src}-${dark ? "dark" : "light"}.png`}
+        src={`${src}-${dark ? "dark" : "light"}.webp`}
         alt=""
         draggable={false}
+        loading="lazy"
+        decoding="async"
         className="h-full w-full select-none object-cover object-top"
       />
     </div>

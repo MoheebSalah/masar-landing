@@ -10,9 +10,9 @@ gsap.registerPlugin(ScrollTrigger);
 // Detection clips shown in the carousel, in display order.
 const VIDEOS = [
   "/assets/Carousel/Carousel 1.mp4",
-  "/assets/Carousel/Carousel 2.webm",
-  "/assets/Carousel/Carousel 3.webm",
-  "/assets/Carousel/Carousel 4.webm",
+  "/assets/Carousel/Carousel 2.mp4",
+  "/assets/Carousel/Carousel 3.mp4",
+  "/assets/Carousel/Carousel 4.mp4",
   "/assets/Carousel/Carousel 5.mp4",
 ];
 
@@ -250,7 +250,7 @@ export default function SeeInAction() {
                   // its own resolution or aspect ratio. The rounding lives on the
                   // video itself now that the stage no longer clips.
                   className="h-full w-full rounded-2xl object-cover shadow-lg"
-                  preload="metadata"
+                  preload="none"
                   muted
                   playsInline
                   onPlay={() => setIsPlaying(true)}

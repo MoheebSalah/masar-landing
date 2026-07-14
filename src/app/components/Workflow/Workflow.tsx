@@ -22,7 +22,7 @@ const STEPS = [
     heading: "تصنيف درجة الخطورة",
     paragraph:
       "يقيس النظام حجم الضرر وعمقه وموضعه على المسار، ثم يمنحه درجة خطورة واضحة، فتُرتَّب البلاغات حسب الأولوية بدل أن تتكدّس بلا معيار.",
-    media: "/assets/Workflow/Workflow%202.png",
+    media: "/assets/Workflow/Workflow%202.webp",
     reverse: true,
   },
   {

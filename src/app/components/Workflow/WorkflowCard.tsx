@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { blurReveal } from "./blurReveal";
+import { useInViewVideo } from "../useInViewVideo";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -34,6 +35,7 @@ export default function WorkflowCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
+  const videoRef = useInViewVideo<HTMLVideoElement>();
   const isVideo = media.endsWith(".mp4");
 
   useEffect(() => {
@@ -82,11 +84,12 @@ export default function WorkflowCard({
       <div ref={mediaRef} className="shrink-0">
         {isVideo ? (
           <video
+            ref={videoRef}
             src={media}
-            autoPlay
             loop
             muted
             playsInline
+            preload="none"
             aria-hidden="true"
             className="h-100 w-160 rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
           />
@@ -96,6 +99,8 @@ export default function WorkflowCard({
             src={media}
             alt=""
             aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="h-100 w-160 rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
           />
         )}
