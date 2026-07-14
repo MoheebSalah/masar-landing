@@ -76,23 +76,31 @@ export default function OdometerNumber({ value, prefix, suffix, step }: Props) {
       });
     };
 
-    // First appearance: the number counts up from 0 to its value the moment it
-    // scrolls into view. Because the columns are fixed width, it climbs in place
-    // (units spinning fastest, leading blanks rolling into digits) with no
-    // reflow. The sign and suffix stay in place throughout.
+    // First appearance: the reels start as an all-zeros odometer and, the moment
+    // it scrolls into view, every reel rolls up to the real number at once. The
+    // sign is already in place; higher places settle a beat later so the number
+    // locks in with a mechanical, cascading finish.
     if (firstRun.current) {
       firstRun.current = false;
 
-      rollTo(columnsFor(prefix, 0, suffix), null);
+      const target = columnsFor(prefix, value, suffix);
+      // All digit/units reels on "0" (sign kept at its final glyph).
+      rollTo(
+        target.map((ch, i) => (i === 0 ? ch : "0")),
+        null
+      );
 
-      const proxy = { v: 0 };
       const intro = gsap.timeline({ paused: true });
-      intro.to(proxy, {
-        v: value,
-        duration: 1.6,
-        ease: "power2.out",
-        onUpdate: () =>
-          rollTo(columnsFor(prefix, Math.round(proxy.v), suffix), null),
+      target.forEach((ch, i) => {
+        if (i === 0) return; // the sign doesn't roll
+        const el = strip(i);
+        if (!el) return;
+        const y = -indexOf(COLUMN_GLYPHS[i], ch) * lineH;
+        intro.to(
+          el,
+          { y, duration: 1.1, ease: "power3.out" },
+          (COLUMNS - 1 - i) * 0.12
+        );
       });
 
       let played = false;
