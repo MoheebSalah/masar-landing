@@ -9,13 +9,11 @@ type Props = {
   title: string;
   // Changing this triggers the roll, even if the text is identical.
   step: number;
-  // When true, swap the title instantly with no roll (fast scrolling).
-  instant?: boolean;
 };
 
 // The visible title rolls up and out of a masked box while the next title rises
 // into its place from below — the same swap the phone-showcase title uses.
-export default function RollingTitle({ title, step, instant }: Props) {
+export default function RollingTitle({ title, step }: Props) {
   const innerRef = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(title);
   const firstRun = useRef(true);
@@ -30,13 +28,6 @@ export default function RollingTitle({ title, step, instant }: Props) {
     if (!inner) return;
 
     const next = title;
-    // Fast scroll: swap the text in place with no roll, so rapidly crossing
-    // several stats never leaves the title half-rolled between two lines.
-    if (instant) {
-      flushSync(() => setCurrent(next));
-      gsap.set(inner, { yPercent: 0 });
-      return;
-    }
     // The column is two lines tall, so half its height is one line.
     const tween = gsap.fromTo(
       inner,

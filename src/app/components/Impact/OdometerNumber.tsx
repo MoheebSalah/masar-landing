@@ -17,8 +17,6 @@ type Props = {
   suffix: string;
   // Bumping this rolls every reel to the new number.
   step: number;
-  // When true, jump straight to the new number with no roll (fast scrolling).
-  instant?: boolean;
 };
 
 // Each reel to show `value`: index 0 = blank, digit d shown at index d + 1.
@@ -33,13 +31,7 @@ function digitIndices(value: number): number[] {
 // its old value to the new one (no fading). Leading columns that aren't needed
 // roll to blank and collapse their width, so the number stays centred as it
 // shrinks and grows between e.g. "+5400" and "-60%".
-export default function OdometerNumber({
-  value,
-  prefix,
-  suffix,
-  step,
-  instant,
-}: Props) {
+export default function OdometerNumber({ value, prefix, suffix, step }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const firstRun = useRef(true);
 
@@ -126,19 +118,6 @@ export default function OdometerNumber({
         io.disconnect();
         intro.kill();
       };
-    }
-
-    // Fast scroll: snap the reels to the new value with no roll, so rapidly
-    // crossing several stats never leaves a half-rolled reel mid-flight.
-    if (instant) {
-      roll(null, "sign", signIdx);
-      dIdx.forEach((idx, i) => {
-        roll(null, `d${i}`, idx);
-        openWidth(null, `d${i}`, idx !== 0);
-      });
-      roll(null, "suffix", suffixIdx);
-      openWidth(null, "suffix", suffixIdx !== 0);
-      return;
     }
 
     // Later steps: roll straight from the current reels to the new value.
