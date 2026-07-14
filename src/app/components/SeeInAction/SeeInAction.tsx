@@ -115,6 +115,58 @@ export default function SeeInAction() {
       y: gsap.quickTo(cursor, "y", { duration: 0.2, ease: "power3.out" }),
     };
 
+    // Keep the play/pause glyph correct even when the page SCROLLS the stage
+    // under a stationary pointer. No pointermove fires on scroll, so relying on
+    // it alone left the glyph hidden — and since the stage sets `cursor-none`,
+    // NO cursor showed at all — until the mouse was nudged. We track the pointer
+    // in viewport space and re-evaluate on every move AND scroll: inside the
+    // stage → show + position the glyph; outside → hide it.
+    let pointerX = 0;
+    let pointerY = 0;
+    let pointerKnown = false;
+    let cursorInside = false;
+    const syncCursor = () => {
+      if (!pointerKnown || !cursorTo.current) return;
+      const rect = stage.getBoundingClientRect();
+      const inside =
+        pointerX >= rect.left &&
+        pointerX <= rect.right &&
+        pointerY >= rect.top &&
+        pointerY <= rect.bottom;
+      if (inside) {
+        const x = pointerX - rect.left;
+        const y = pointerY - rect.top;
+        // Jump straight to the pointer on first entry (no visible slide from a
+        // stale spot); follow smoothly once already shown.
+        if (!cursorInside) gsap.set(cursor, { x, y });
+        else {
+          cursorTo.current.x(x);
+          cursorTo.current.y(y);
+        }
+        cursorInside = true;
+        setCursorShown(true);
+      } else if (cursorInside) {
+        cursorInside = false;
+        setCursorShown(false);
+      }
+    };
+    const trackPointer = (e: PointerEvent) => {
+      pointerX = e.clientX;
+      pointerY = e.clientY;
+      pointerKnown = true;
+      syncCursor();
+    };
+    let scrollRaf = 0;
+    const onScroll = () => {
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        syncCursor();
+      });
+    };
+    window.addEventListener("pointermove", trackPointer, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+
     // Auto-play the selected clip as the section nears view, and pause it once
     // the section leaves. Only the centre clip is ever touched. The bottom
     // rootMargin starts the (preload="none") clip loading ~a third of a screen
@@ -152,6 +204,9 @@ export default function SeeInAction() {
 
     return () => {
       window.removeEventListener("resize", measure);
+      window.removeEventListener("pointermove", trackPointer);
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(scrollRaf);
       observer.disconnect();
       cursorTo.current = null;
       ctx.revert();
@@ -203,16 +258,6 @@ export default function SeeInAction() {
     settle(real + n * Math.round((current - real) / n));
   };
 
-  // Trail the play/pause glyph on the pointer while it is over the stage.
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const stage = stageRef.current;
-    if (!stage || !cursorTo.current) return;
-    const rect = stage.getBoundingClientRect();
-    cursorTo.current.x(e.clientX - rect.left);
-    cursorTo.current.y(e.clientY - rect.top);
-    setCursorShown(true);
-  };
-
   return (
     <section
       ref={sectionRef}
@@ -250,8 +295,6 @@ export default function SeeInAction() {
             ref={stageRef}
             dir="ltr"
             className="relative z-0 aspect-video w-full flex-1 cursor-none select-none"
-            onPointerMove={onPointerMove}
-            onPointerLeave={() => setCursorShown(false)}
             onClick={togglePlay}
           >
             {VIDEOS.map((src, i) => (
