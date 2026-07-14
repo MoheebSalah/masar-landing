@@ -95,7 +95,13 @@ export default function Loader() {
       // instant the detection box settles, so the loader exits the moment the
       // animation lands instead of idling on a full progress bar.
       const reveal = () => {
-        const cover = Math.max(window.innerWidth, window.innerHeight) * 1.02;
+        // Grow the box with a transform (scale), NOT width/height. Animating
+        // width/height on this full-viewport element relayouts every frame and
+        // registers a stream of layout shifts — it was the entire source of the
+        // page's CLS. Scale is compositor-only, so it shifts nothing. 440×288 is
+        // the box's CSS size (w-110 h-72); 1.15 over-covers so no dark edge peeks.
+        const coverScale =
+          Math.max(window.innerWidth / 440, window.innerHeight / 288) * 1.15;
         // The frame settled smaller than full scale during the lock; match the
         // dark window to that same scale now so the dark cutout lines up exactly
         // with the detection box before they grow out together.
@@ -117,15 +123,13 @@ export default function Loader() {
           { backgroundColor: "rgba(52,168,216,0)", duration: 0.3 },
           0
         );
-        // The frame settled tight below full scale; expand it back to scale 1
-        // as it grows so the box opens all the way out to the viewport edges
-        // in step with the dark window (now matched to the same start scale).
+        // Both open out together from that shared start scale to full coverage.
+        // Same base size + same target scale, so the dark cutout and detection
+        // box stay perfectly aligned as they grow.
         out.to(
           [shadowWindow, frame],
           {
-            width: cover,
-            height: cover,
-            scale: 1,
+            scale: coverScale,
             duration: 1.0,
             ease: "power4.inOut",
           },
