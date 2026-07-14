@@ -82,6 +82,20 @@ export default function Workflow() {
       const len = trail.getTotalLength();
       gsap.set(trail, { strokeDasharray: len, strokeDashoffset: len });
 
+      // A PRIVATE copy of the route for positioning the coordinate label. It is
+      // parsed straight from the route string (not from the <path> element) on
+      // purpose: the marker's motionPath `align` transforms the element's cached
+      // rawPath IN PLACE, so a second align-based follower reading that same
+      // element would resolve against corrupted coordinates and drift onto — and
+      // past — the marker. Reading a fresh copy keeps the label independent, and
+      // driving it off the marker's own progress (below) locks the two together.
+      const labelPath = MotionPathPlugin.getRawPath(ROUTE);
+      const placeLabel = (p: number) => {
+        const pt = MotionPathPlugin.getPositionOnPath(labelPath, p);
+        gsap.set(label, { x: pt.x, y: pt.y });
+      };
+      placeLabel(0); // seat it on the route's start point right away
+
       // Fade in the route, the travelling marker and its coordinate label as the
       // section arrives — the pathway, arrow and numbers ease up from transparent
       // instead of being there from the first frame. They also start out hidden
@@ -108,15 +122,6 @@ export default function Workflow() {
           start: "top center", // begins once the route's start reaches mid-screen
           end: "bottom center",
           scrub: 1, // marker + trail tied to scroll position
-          onUpdate: (self) => {
-            const p = self.progress;
-            const lat = LAT_START + p * (LAT_END - LAT_START);
-            const lng = LNG_START + p * (LNG_END - LNG_START);
-            if (latRef.current)
-              latRef.current.textContent = `${lat.toFixed(4)}°N`;
-            if (lngRef.current)
-              lngRef.current.textContent = `${lng.toFixed(4)}°W`;
-          },
         },
       });
 
@@ -144,21 +149,30 @@ export default function Workflow() {
         0,
       );
 
-      // The coordinate label rides the same point but stays upright (no
-      // autoRotate) so the numbers remain readable while it moves. Note: no
-      // `alignOrigin` here — that would pin the label's bounding-box CENTRE to
-      // the path (dropping it right on top of the marker and cancelling the
-      // text's x offset). Omitting it anchors the group's local origin (0,0)
-      // to the path, so the text's positive x offset keeps it beside the marker.
+      // The coordinate label is NOT given its own motionPath tween — a second
+      // `align` follower on the same path fights the marker over the shared,
+      // mutated rawPath and drifts. Instead it rides a proxy value tweened inside
+      // THIS timeline, so it shares the marker's exact scrubbed clock. Reading the
+      // raw scroll progress instead would run the label ahead of the smoothed
+      // marker (scrub lag) and let it overtake and overlap the arrow. `readout.p`
+      // is the same length-normalised progress the marker's motionPath uses, so
+      // the label stays glued beside the arrow and neither overtakes the other.
+      const readout = { p: 0 };
       tl.to(
-        label,
+        readout,
         {
-          motionPath: {
-            path: trail,
-            align: trail,
-          },
+          p: 1,
           ease: "none",
-          immediateRender: true,
+          onUpdate: () => {
+            const p = readout.p;
+            placeLabel(p);
+            const lat = LAT_START + p * (LAT_END - LAT_START);
+            const lng = LNG_START + p * (LNG_END - LNG_START);
+            if (latRef.current)
+              latRef.current.textContent = `${lat.toFixed(4)}°N`;
+            if (lngRef.current)
+              lngRef.current.textContent = `${lng.toFixed(4)}°W`;
+          },
         },
         0,
       );
@@ -235,11 +249,14 @@ export default function Workflow() {
           </g>
 
           {/* Live coordinates: ride the same path point, stay upright, and sit
-              clearly beside (not on) the marker. Text is updated on scroll. */}
-          <g ref={labelRef} className="opacity-0">
+              clearly beside (not on) the marker. Text is updated on scroll.
+              `direction:ltr` is essential — the page is RTL, so without it
+              `text-anchor:start` would anchor these numbers on their RIGHT edge
+              and grow them leftward back over the marker. */}
+          <g ref={labelRef} className="opacity-0 [direction:ltr]">
             <text
               ref={latRef}
-              x="86"
+              x="38"
               y="-5"
               textAnchor="start"
               fontSize={18}
@@ -251,7 +268,7 @@ export default function Workflow() {
             </text>
             <text
               ref={lngRef}
-              x="86"
+              x="38"
               y="17"
               textAnchor="start"
               fontSize={18}
