@@ -43,6 +43,8 @@ export default function SeeInAction() {
   // Reused across settles so a new click mid-animation can kill the tween.
   const proxyRef = useRef({ v: 0 });
   const inViewRef = useRef(false);
+  // Fired once, when the first clip has a frame ready — fades the stage in.
+  const revealedRef = useRef(false);
   const cursorTo = useRef<{ x: gsap.QuickToFunc; y: gsap.QuickToFunc } | null>(
     null,
   );
@@ -79,6 +81,17 @@ export default function SeeInAction() {
     });
   };
 
+  // Ease the whole stage in the first time a clip has an actual frame to show,
+  // so the video never hard-cuts (“snaps”) in once it finishes loading. Runs
+  // once; the fallback timer below guarantees it fires even if a clip stalls.
+  const revealStage = () => {
+    if (revealedRef.current) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+    revealedRef.current = true;
+    gsap.to(stage, { autoAlpha: 1, y: 0, duration: 0.7, ease: "power3.out" });
+  };
+
   useEffect(() => {
     const section = sectionRef.current;
     const stage = stageRef.current;
@@ -92,22 +105,33 @@ export default function SeeInAction() {
     measure();
     window.addEventListener("resize", measure);
 
+    // Start hidden and slightly lowered; revealStage() fades it up once the
+    // first frame is ready. (render() above only touches the per-slide opacity,
+    // not the stage wrapper, so the two don't fight.)
+    gsap.set(stage, { autoAlpha: 0, y: 24 });
+
     cursorTo.current = {
       x: gsap.quickTo(cursor, "x", { duration: 0.2, ease: "power3.out" }),
       y: gsap.quickTo(cursor, "y", { duration: 0.2, ease: "power3.out" }),
     };
 
-    // Auto-play the selected clip when the section scrolls into view, and pause
-    // it once the section leaves. Only the centre clip is ever touched.
+    // Auto-play the selected clip as the section nears view, and pause it once
+    // the section leaves. Only the centre clip is ever touched. The bottom
+    // rootMargin starts the (preload="none") clip loading ~a third of a screen
+    // early, so it has a frame decoded by the time it's actually on screen.
     const observer = new IntersectionObserver(
       ([entry]) => {
         inViewRef.current = entry.isIntersecting;
         const video = videoRefs.current[mod(activeRef.current, VIDEOS.length)];
         if (!video) return;
-        if (entry.isIntersecting) video.play().catch(() => {});
-        else if (!video.paused) video.pause();
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+          // Safety net: reveal even if the clip stalls and never fires
+          // onLoadedData, so the stage can't get stuck hidden.
+          window.setTimeout(revealStage, 1200);
+        } else if (!video.paused) video.pause();
       },
-      { threshold: 0.5 },
+      { threshold: 0, rootMargin: "0px 0px 33% 0px" },
     );
     observer.observe(section);
 
@@ -253,6 +277,7 @@ export default function SeeInAction() {
                   preload="none"
                   muted
                   playsInline
+                  onLoadedData={revealStage}
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
                 />
