@@ -82,17 +82,19 @@ export default function Workflow() {
       const len = trail.getTotalLength();
       gsap.set(trail, { strokeDasharray: len, strokeDashoffset: len });
 
-      // Fade in the route and the travelling marker as the section arrives —
-      // the pathway and its arrow ease up from transparent instead of being
-      // there from the first frame. (Only these; the rest of the section is
-      // left untouched.)
-      gsap.set([routeRef.current, trail, marker], { opacity: 0 });
+      // Fade in the route, the travelling marker and its coordinate label as the
+      // section arrives — the pathway, arrow and numbers ease up from transparent
+      // instead of being there from the first frame. They also start out hidden
+      // in the markup (opacity-0 class) so there is no pre-JS flash of the groups
+      // stacked at the SVG's origin (0,0) before GSAP positions them on refresh.
+      // (Only these; the rest of the section is left untouched.)
+      gsap.set([routeRef.current, trail, marker, label], { opacity: 0 });
       ScrollTrigger.create({
         trigger: section,
         start: "top 80%",
         once: true,
         onEnter: () => {
-          gsap.to([routeRef.current, trail, marker], {
+          gsap.to([routeRef.current, trail, marker, label], {
             opacity: 1,
             duration: 1,
             ease: "power2.out",
@@ -147,7 +149,7 @@ export default function Workflow() {
       // `alignOrigin` here — that would pin the label's bounding-box CENTRE to
       // the path (dropping it right on top of the marker and cancelling the
       // text's x offset). Omitting it anchors the group's local origin (0,0)
-      // to the path, so the text's negative x offset keeps it beside the marker.
+      // to the path, so the text's positive x offset keeps it beside the marker.
       tl.to(
         label,
         {
@@ -182,6 +184,7 @@ export default function Workflow() {
           {/* Uncompleted track: the full route in primary at low opacity */}
           <path
             ref={routeRef}
+            className="opacity-0"
             d={ROUTE}
             stroke="var(--color-primary)"
             strokeOpacity="0.28"
@@ -217,7 +220,7 @@ export default function Workflow() {
           />
 
           {/* Travelling marker: pulsing ring + blue disc + arrow (points +x) */}
-          <g ref={markerRef}>
+          <g ref={markerRef} className="opacity-0">
             <circle
               className="wf-ring"
               cx="0"
@@ -233,13 +236,13 @@ export default function Workflow() {
 
           {/* Live coordinates: ride the same path point, stay upright, and sit
               clearly beside (not on) the marker. Text is updated on scroll. */}
-          <g ref={labelRef}>
+          <g ref={labelRef} className="opacity-0">
             <text
               ref={latRef}
-              x="-54"
-              y="-6"
-              textAnchor="end"
-              fontSize={24}
+              x="86"
+              y="-5"
+              textAnchor="start"
+              fontSize={18}
               fontWeight={700}
               letterSpacing={1}
               fill="#b1b4b1"
@@ -248,10 +251,10 @@ export default function Workflow() {
             </text>
             <text
               ref={lngRef}
-              x="-54"
-              y="22"
-              textAnchor="end"
-              fontSize={24}
+              x="86"
+              y="17"
+              textAnchor="start"
+              fontSize={18}
               fontWeight={700}
               letterSpacing={1}
               fill="#b1b4b1"
