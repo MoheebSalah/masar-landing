@@ -120,9 +120,9 @@ export default function Impact() {
     <section
       ref={sectionRef}
       id="impact"
-      /* h-[320vh] == 0.8 viewport of scroll per stat (STATS has 4). The sticky
+      /* h-[480vh] == 1.2 viewports of scroll per stat (STATS has 4). The sticky
          panel inside holds the number in place while these 4 screens pass. */
-      className="relative h-[320vh] w-full bg-background"
+      className="relative h-[480vh] w-full bg-background"
     >
       <div className="sticky top-0 flex h-screen flex-col items-center justify-center">
         {/* Content column matches the showcase width; everything is anchored to
