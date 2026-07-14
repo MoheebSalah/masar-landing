@@ -140,16 +140,16 @@ export default function Loader() {
       intro.fromTo(
         pothole,
         { autoAlpha: 0, scale: 0.9 },
-        { autoAlpha: 1, scale: 1, duration: 0.7, ease: "power2.out" },
-        0.05
+        { autoAlpha: 1, scale: 1, duration: 0.4, ease: "power2.out" },
+        0
       );
       intro.fromTo(
         frame,
-        { autoAlpha: 0, scale: 1.4 },
-        { autoAlpha: 1, scale: 1, duration: 0.45, ease: "power3.out" },
-        0.6
+        { autoAlpha: 0, scale: 1.2 },
+        { autoAlpha: 1, scale: 1, duration: 0.5, ease: "power2.out" },
+        0.1
       );
-      intro.to(label, { autoAlpha: 1, duration: 0.3 }, 0.7);
+      intro.to(label, { autoAlpha: 1, duration: 0.25 }, 0.35);
 
       // The frame breathes as it locks onto the pothole — staying dead centred
       // the whole time. It pulses: shrinking well in (−25% of the initial
@@ -157,25 +157,25 @@ export default function Loader() {
       // shrink takes longer than the quicker spring back out, giving it a
       // measured "closing in" feel before it settles. The moment it settles,
       // the reveal fires — this is what ends the loader.
-      const lock = gsap.timeline({ delay: 1.05, onComplete: reveal });
+      const lock = gsap.timeline({ delay: 0.6, onComplete: reveal });
       // shrink well in
-      lock.to(frame, { scale: 0.8, duration: 0.55, ease: "power2.inOut" }, 0);
+      lock.to(frame, { scale: 0.8, duration: 0.38, ease: "power2.inOut" }, 0);
       // spring back out a touch (quicker)
-      lock.to(frame, { scale: 0.85, duration: 0.28, ease: "power2.out" }, 0.55);
+      lock.to(frame, { scale: 0.85, duration: 0.18, ease: "power2.out" }, 0.38);
       // shrink in again
-      lock.to(frame, { scale: 0.65, duration: 0.55, ease: "power2.inOut" }, 0.83);
+      lock.to(frame, { scale: 0.65, duration: 0.38, ease: "power2.inOut" }, 0.56);
       // spring back out a touch (quicker)
-      lock.to(frame, { scale: 0.7, duration: 0.28, ease: "power2.out" }, 1.38);
+      lock.to(frame, { scale: 0.7, duration: 0.18, ease: "power2.out" }, 0.94);
       // shrink in one last time and settle, centred over the pothole
-      lock.to(frame, { scale: 0.5, duration: 0.55, ease: "power3.out" }, 1.66);
+      lock.to(frame, { scale: 0.5, duration: 0.4, ease: "power3.out" }, 1.12);
 
       // The percentage readout counts to 100.00%, landing exactly as the box
       // settles so it reads complete the moment the reveal begins.
       const counter = { val: 0 };
       gsap.to(counter, {
         val: 100,
-        duration: 2.15,
-        delay: 1.05,
+        duration: 1.52,
+        delay: 0.6,
         ease: "power1.inOut",
         onUpdate: () => {
           percent.textContent = counter.val.toFixed(2).padStart(5, "0") + "%";

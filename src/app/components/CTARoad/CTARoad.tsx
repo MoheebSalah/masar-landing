@@ -36,7 +36,7 @@ export default function CTARoad() {
         scrollTrigger: { trigger: section, start: "top 70%", once: true },
         defaults: { ease: "power2.out" },
       });
-      tl.from(".cta-road-copy", { y: 40, opacity: 0, duration: 0.8 }, 0);
+      tl.from(".cta-road-copy", { y: 40, opacity: 0, duration: 0.6 }, 0);
 
       // 1. The asphalt is wiped in first, right→left. A clip wipe (rather than a
       //    round-capped dash draw) keeps it smooth — no dot popping in at the
@@ -44,16 +44,16 @@ export default function CTARoad() {
       tl.fromTo(
         ".road-surface-rect",
         { attr: { x: 1200, width: 0 } },
-        { attr: { x: 240, width: 960 }, duration: 1.4, ease: "power2.inOut" },
-        0.3,
+        { attr: { x: 240, width: 960 }, duration: 0.9, ease: "power2.inOut" },
+        0.25,
       );
 
       // 2. The lane lines are then wiped in along the road from the right
       //    (start) to the end. The reveal rect stays anchored at the right
       //    edge (width tracks its left edge) so the dashes appear in order;
       //    the CSS dash-march keeps running underneath the whole time.
-      const revealStart = 1.7;
-      const revealDur = 1.5;
+      const revealStart = 1.15;
+      const revealDur = 1.0;
       tl.fromTo(
         ".road-reveal-rect",
         { attr: { x: 1200, width: 0 } },
@@ -82,7 +82,7 @@ export default function CTARoad() {
       // 3. Once the road is fully laid, the demo button arrives at the end.
       tl.from(
         ".road-cta",
-        { opacity: 0, scale: 0.85, duration: 0.6, ease: "back.out(1.8)" },
+        { opacity: 0, scale: 0.85, duration: 0.5, ease: "back.out(1.8)" },
         revealStart + revealDur,
       );
     }, section);
