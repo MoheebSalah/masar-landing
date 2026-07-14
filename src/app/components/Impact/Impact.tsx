@@ -19,13 +19,24 @@ const STATS = [
 ];
 const N = STATS.length;
 
+// Above this scroll speed (px/s) a step change snaps instantly instead of
+// rolling. A flick crosses a stat's ~1.5-viewport segment faster than the 0.75s
+// roll can finish, so animating each intermediate step just produces a mush of
+// half-settled reels — snapping keeps the landed number correct and clean.
+const FAST_SCROLL_VELOCITY = 4000;
+
 export default function Impact() {
   const sectionRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<ScrollTrigger | null>(null);
   const eyebrowRef = useRef<HTMLParagraphElement>(null);
   const bulletRowRef = useRef<HTMLDivElement>(null);
-  // Which stat is on screen (0…N-1); driven by the sticky scroll position.
-  const [step, setStep] = useState(0);
+  // True while a navigator click is scrolling programmatically, so the
+  // scroll-driven step updates are ignored and the click's single roll stands.
+  const navigatingRef = useRef(false);
+  // Which stat is on screen (0…N-1), plus whether the last change came from a
+  // fast scroll (then the number/title snap instead of rolling). Driven by the
+  // sticky scroll position.
+  const [{ step, instant }, setStat] = useState({ step: 0, instant: false });
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -42,8 +53,12 @@ export default function Impact() {
         start: "top top",
         end: "bottom bottom",
         onUpdate: (self) => {
+          if (navigatingRef.current) return;
           const idx = Math.min(N - 1, Math.floor(self.progress * N));
-          setStep((prev) => (prev === idx ? prev : idx));
+          const snap = Math.abs(self.getVelocity()) > FAST_SCROLL_VELOCITY;
+          setStat((prev) =>
+            prev.step === idx ? prev : { step: idx, instant: snap }
+          );
         },
       });
     }, section);
@@ -79,13 +94,24 @@ export default function Impact() {
   }, []);
 
   // Jump to the middle of stat `i`'s scroll segment so it lands on that number.
+  // The odometer is rolled to `i` right away and the scroll-driven updates are
+  // muted for the trip, so the click plays one clean roll to the target instead
+  // of the fast programmatic scroll snapping through the segments in between.
   const scrollToStep = (i: number) => {
     const st = triggerRef.current;
     if (!st) return;
     const target = st.start + ((i + 0.5) / N) * (st.end - st.start);
+    navigatingRef.current = true;
+    setStat((prev) => (prev.step === i ? prev : { step: i, instant: false }));
+    const done = () => {
+      navigatingRef.current = false;
+    };
     const lenis = getLenis();
-    if (lenis) lenis.scrollTo(target, { duration: 1 });
-    else window.scrollTo({ top: target, behavior: "smooth" });
+    if (lenis) lenis.scrollTo(target, { duration: 1, onComplete: done });
+    else {
+      window.scrollTo({ top: target, behavior: "smooth" });
+      setTimeout(done, 1000);
+    }
   };
 
   const stat = STATS[step];
@@ -94,9 +120,9 @@ export default function Impact() {
     <section
       ref={sectionRef}
       id="impact"
-      /* h-[600vh] == 1.5 viewports of scroll per stat (STATS has 4). The sticky
+      /* h-[400vh] == 1 viewport of scroll per stat (STATS has 4). The sticky
          panel inside holds the number in place while these 4 screens pass. */
-      className="relative h-[600vh] w-full bg-background"
+      className="relative h-[400vh] w-full bg-background"
     >
       <div className="sticky top-0 flex h-screen flex-col items-center justify-center">
         {/* Content column matches the showcase width; everything is anchored to
@@ -114,6 +140,7 @@ export default function Impact() {
               prefix={stat.prefix}
               suffix={stat.suffix}
               step={step}
+              instant={instant}
             />
           </div>
 
@@ -121,7 +148,7 @@ export default function Impact() {
               in RTL it sits on the right with the title flowing left). */}
           <div ref={bulletRowRef} className="mt-6 flex items-center gap-5">
             <ArrowBullet className="h-10 w-auto shrink-0 text-primary" />
-            <RollingTitle title={stat.title} step={step} />
+            <RollingTitle title={stat.title} step={step} instant={instant} />
           </div>
         </div>
 
