@@ -5,7 +5,7 @@ import Hero from "./components/Hero/Hero";
 import Problem from "./components/Problem/Problem";
 import Solution from "./components/Solution/Solution";
 import Workflow from "./components/Workflow/Workflow";
-// import Bento from "./componendts/Bento/Bento";
+// import Bento from "./components/Bento/Bento";
 import SeeInAction from "./components/SeeInAction/SeeInAction";
 import CTARoad from "./components/CTARoad/CTARoad";
 import Footer from "./components/Footer/Footer";

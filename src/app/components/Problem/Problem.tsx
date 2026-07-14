@@ -11,17 +11,17 @@ const PROBLEMS = [
   {
     word: "التنظيم",
     sentence: "البلاغات غير مرتبة، اتصالات، أوراق ورسائل واتساب — تتوزّع على قنوات متفرقة ولا تجتمع في مكان واحد، فتضيع بين الموظفين ولا يصل أغلبها إلى الجهة المسؤولة عن الإصلاح.",
-    image: "/assets/Problems/Problem 1.png",
+    image: "/assets/Problems/Problem 1.webp",
   },
   {
     word: "الخطورة",
     sentence: "درجة خطورة الحفرة غير معروفة — لا توجد طريقة واضحة لمعرفة أيّ الحفر تشكّل خطرًا فعليًا على السائقين والمشاة، فتُعامَل كل البلاغات بالطريقة نفسها، ويتأخر إصلاح الأخطر منها.",
-    image: "/assets/Problems/Problem 2.png",
+    image: "/assets/Problems/Problem 2.webp",
   },
   {
     word: "المتابعة",
     sentence: "متابعة عملية سد الحفرة غير مستقرة — بعد إرسال البلاغ، لا يُعرف أين وصلت المعالجة ولا متى ستُصلَح، ولا يوجد ما يثبت أن الإصلاح تمّ فعلًا بعد انتهاء العمل.",
-    image: "/assets/Problems/Problem 3.png",
+    image: "/assets/Problems/Problem 3.webp",
   },
 ];
 
@@ -186,6 +186,8 @@ export default function Problem() {
                 src={problem.image}
                 alt=""
                 aria-hidden="true"
+                loading="lazy"
+                decoding="async"
                 className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${index === active ? "opacity-100" : "opacity-0"
                   }`}
               />

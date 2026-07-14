@@ -206,7 +206,7 @@ export default function Loader() {
       />
       <img
         ref={potholeRef}
-        src="/assets/pothole.png"
+        src="/assets/pothole.webp"
         alt=""
         aria-hidden="true"
         className="col-start-1 row-start-1 w-140 opacity-0"

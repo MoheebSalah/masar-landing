@@ -10,11 +10,11 @@ gsap.registerPlugin(ScrollTrigger);
 // The five frames of the story: pothole detected → fixed.
 // Ordered by the numbering in their file names.
 const FRAMES = [
-  "/assets/Solution/Light/Frame%201.png",
-  "/assets/Solution/Light/Frame%202.png",
-  "/assets/Solution/Light/Frame%203.png",
-  "/assets/Solution/Light/Frame%204.png",
-  "/assets/Solution/Light/Frame%205.png",
+  "/assets/Solution/Light/Frame%201.webp",
+  "/assets/Solution/Light/Frame%202.webp",
+  "/assets/Solution/Light/Frame%203.webp",
+  "/assets/Solution/Light/Frame%204.webp",
+  "/assets/Solution/Light/Frame%205.webp",
 ];
 
 export default function Solution() {
@@ -131,6 +131,8 @@ export default function Solution() {
           src={src}
           alt=""
           aria-hidden="true"
+          loading="lazy"
+          decoding="async"
           className="absolute left-1/2 top-1/2 z-1 h-auto w-[64%] max-w-250 -translate-x-1/2 -translate-y-1/2"
         />
       ))}
