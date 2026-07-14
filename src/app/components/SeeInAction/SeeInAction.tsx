@@ -318,6 +318,7 @@ export default function SeeInAction() {
                   // video itself now that the stage no longer clips.
                   className="h-full w-full rounded-2xl object-cover shadow-lg"
                   preload="none"
+                  loop
                   muted
                   playsInline
                   onLoadedData={revealStage}
