@@ -16,7 +16,7 @@ export default function ProblemPoint({
       <button
         type="button"
         onClick={onSelect}
-        className={`cursor-pointer font-heading text-[6rem] leading-[1.05] transition-colors duration-300 ${
+        className={`cursor-pointer font-heading text-[6rem] leading-[1.05] transition-colors duration-300 max-md:text-[2.5rem] ${
           active ? "text-primary" : "text-muted hover:text-subtext"
         }`}
       >
@@ -29,7 +29,7 @@ export default function ProblemPoint({
           active ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         }`}
       >
-        <p className="overflow-hidden text-t2 leading-relaxed text-subtext">
+        <p className="overflow-hidden text-t2 leading-relaxed text-subtext max-md:text-t3">
           {sentence}
         </p>
       </div>
