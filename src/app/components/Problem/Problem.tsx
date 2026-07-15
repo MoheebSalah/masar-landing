@@ -44,6 +44,14 @@ export default function Problem() {
   const goToPoint = (index: number) => {
     const section = sectionRef.current;
     if (!section) return;
+
+    // On phones the section is a single screen and navigation is by tapping a
+    // title — no scroll choreography, just switch the active point.
+    if (!window.matchMedia("(min-width: 768px)").matches) {
+      setActive(index);
+      return;
+    }
+
     const scrollable = section.offsetHeight - window.innerHeight;
     lockRef.current = true;
     window.clearTimeout(lockTimer.current);
@@ -61,54 +69,51 @@ export default function Problem() {
     const section = sectionRef.current;
     if (!section) return;
 
-    let frame = 0;
+    const mm = gsap.matchMedia();
     const clamp = (v: number, min: number, max: number) =>
       Math.min(max, Math.max(min, v));
 
-    // Drive the active point from how far we've scrolled through the pinned
-    // (sticky) range — the section holds still in the middle and each third of
-    // the scroll selects the next problem.
-    const update = () => {
-      frame = 0;
-      if (lockRef.current) return;
-      const vh = window.innerHeight;
-      const top = section.getBoundingClientRect().top;
-      const scrollable = section.offsetHeight - vh;
-      const progress = clamp(-top / scrollable, 0, 1);
-      const index = clamp(
-        Math.floor(progress * PROBLEMS.length),
-        0,
-        PROBLEMS.length - 1
-      );
-      setActive(index);
-    };
+    // Desktop only: drive the active point from how far we've scrolled through
+    // the pinned (sticky) range — the section holds still in the middle and each
+    // third of the scroll selects the next problem. Reverted below 768px, where
+    // the section collapses to a single tap-navigated screen.
+    mm.add("(min-width: 768px)", () => {
+      let frame = 0;
+      const update = () => {
+        frame = 0;
+        if (lockRef.current) return;
+        const vh = window.innerHeight;
+        const top = section.getBoundingClientRect().top;
+        const scrollable = section.offsetHeight - vh;
+        const progress = clamp(-top / scrollable, 0, 1);
+        const index = clamp(
+          Math.floor(progress * PROBLEMS.length),
+          0,
+          PROBLEMS.length - 1
+        );
+        setActive(index);
+      };
+      const onScroll = () => {
+        if (!frame) frame = requestAnimationFrame(update);
+      };
+      // Release the click lock as soon as the smooth scroll settles.
+      const onScrollEnd = () => {
+        lockRef.current = false;
+      };
+      update();
+      window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("scrollend", onScrollEnd);
+      window.addEventListener("resize", onScroll);
 
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-
-    // Release the click lock as soon as the smooth scroll settles.
-    const onScrollEnd = () => {
-      lockRef.current = false;
-    };
-
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("scrollend", onScrollEnd);
-    window.addEventListener("resize", onScroll);
-
-    // Reveal the title, the problem words and the image together as the section
-    // scrolls into view — one timeline keeps them in sync: the title leads, the
-    // words rise in from the start side (right, in RTL) with a stagger, and the
-    // image fades up alongside them.
-    const ctx = gsap.context(() => {
+      // Reveal the title, the problem words and the image together as the
+      // section scrolls into view — the title leads, the words rise in from the
+      // start side (right, in RTL) with a stagger, the image fades up alongside.
       const words = textColRef.current
         ? Array.from(textColRef.current.children)
         : [];
       gsap.set(titleRef.current, { autoAlpha: 0, y: 24 });
       gsap.set(words, { autoAlpha: 0, x: 60 });
       gsap.set(imageColRef.current, { autoAlpha: 0, y: 40, scale: 0.95 });
-
       const reveal = gsap.timeline({
         scrollTrigger: { trigger: section, start: "top 65%", once: true },
       });
@@ -124,15 +129,40 @@ export default function Problem() {
           { autoAlpha: 1, y: 0, scale: 1, duration: 0.9, ease: "power3.out" },
           0.15
         );
-    }, section);
+
+      return () => {
+        window.removeEventListener("scroll", onScroll);
+        window.removeEventListener("scrollend", onScrollEnd);
+        window.removeEventListener("resize", onScroll);
+        if (frame) cancelAnimationFrame(frame);
+      };
+    });
+
+    // Mobile: no scroll cycling. Just a light entrance reveal — the stacked
+    // titles and image fade up together once the section slides into view.
+    mm.add("(max-width: 767px)", () => {
+      const words = textColRef.current
+        ? Array.from(textColRef.current.children)
+        : [];
+      const targets = [titleRef.current, ...words, imageColRef.current].filter(
+        Boolean
+      );
+      gsap.set(targets, { autoAlpha: 0, y: 24 });
+      const reveal = gsap.timeline({
+        scrollTrigger: { trigger: section, start: "top 75%", once: true },
+      });
+      reveal.to(targets, {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.6,
+        ease: "power3.out",
+        stagger: 0.08,
+      });
+    });
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("scrollend", onScrollEnd);
-      window.removeEventListener("resize", onScroll);
-      ctx.revert();
+      mm.revert();
       window.clearTimeout(lockTimer.current);
-      if (frame) cancelAnimationFrame(frame);
     };
   }, []);
 
@@ -143,9 +173,9 @@ export default function Problem() {
     <section
       id="problem"
       ref={sectionRef}
-      className="relative z-10 h-[300vh] rounded-t-brand bg-background"
+      className="relative z-10 h-[300vh] rounded-t-brand bg-background max-md:h-dvh"
     >
-      <div className="sticky top-0 flex h-screen flex-col justify-center gap-10">
+      <div className="sticky top-0 flex h-screen flex-col justify-center gap-10 max-md:h-dvh max-md:gap-6">
         {/* Section title — tells visitors this section is about the hurdles of
             keeping roads in repair (what Masar is built to fix). Padding matches
             the grid below so it lines up with the problem words. */}
@@ -153,16 +183,18 @@ export default function Problem() {
           ref={titleRef}
           className="px-8 text-right md:px-16 lg:px-32"
         >
-          <h2 className="font-heading text-h3 text-text lg:text-h2">
+          <h2 className="font-heading text-h3 text-text lg:text-h2 max-md:text-t1">
             تحديات إدارة أضرار الطرق
           </h2>
         </div>
 
-        {/* Side distance matches the hero headline's (px-8 / md:px-16 / lg:px-32) */}
-        <div className="grid w-full grid-cols-[1fr_1.3fr] items-stretch gap-12 px-8 md:px-16 lg:px-32">
+        {/* Side distance matches the hero headline's (px-8 / md:px-16 / lg:px-32).
+            Two columns on desktop; on phones it stacks: titles on top, image
+            below. */}
+        <div className="grid w-full grid-cols-[1fr_1.3fr] items-stretch gap-12 px-8 md:px-16 lg:px-32 max-md:flex max-md:flex-col max-md:gap-6">
           {/* Right (start side in RTL) — the problems we solve.
               Spread to match the image's height, top and bottom. */}
-          <div ref={textColRef} className="flex flex-col justify-between text-right">
+          <div ref={textColRef} className="flex flex-col justify-between text-right max-md:gap-3">
             {PROBLEMS.map((problem, index) => (
               <ProblemPoint
                 key={problem.word}
@@ -177,7 +209,7 @@ export default function Problem() {
           {/* Left — image of the selected problem */}
           <div
             ref={imageColRef}
-            className="relative aspect-3/2 w-full self-center overflow-hidden rounded-brand"
+            className="relative aspect-3/2 w-full self-center overflow-hidden rounded-brand max-md:max-h-[36dvh]"
           >
             {PROBLEMS.map((problem, index) => (
               // eslint-disable-next-line @next/next/no-img-element
