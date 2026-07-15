@@ -30,7 +30,11 @@ export default function Solution() {
     const section = sectionRef.current;
     if (!section) return;
 
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia();
+
+    // Desktop: the two halves converge into a single line over three
+    // viewport-heights of pinned scroll while the frames crossfade.
+    mm.add("(min-width: 768px)", () => {
       const frames = frameRefs.current.filter(Boolean) as HTMLImageElement[];
 
       // How far apart the two sentence halves start, relative to the viewport.
@@ -106,9 +110,65 @@ export default function Solution() {
         { backgroundColor: "#0E1312", ease: "none", duration: 1.3 },
         2.7
       );
-    }, section);
+    });
 
-    return () => ctx.revert();
+    // Mobile: the phone is too narrow for the halves to sit side by side, so
+    // they settle stacked on two lines. Each line starts fully off-screen (the
+    // width can't show them yet) and glides to the centre while fading in, over
+    // a shorter pinned scroll than the desktop's. The frames still crossfade
+    // and the background still darkens into Workflow.
+    mm.add("(max-width: 767px)", () => {
+      const frames = frameRefs.current.filter(Boolean) as HTMLImageElement[];
+
+      // Start each line a full viewport off its own side — invisible until it
+      // slides in.
+      const offset = window.innerWidth;
+
+      gsap.set(frames.slice(1), { opacity: 0 });
+      gsap.set(frames[0], { autoAlpha: 0 });
+      // Neutralise the desktop wrapper offsets; the convergence is driven from
+      // the inner spans here.
+      gsap.set([rightSlideRef.current, leftSlideRef.current], { autoAlpha: 1, x: 0 });
+      gsap.set(rightRef.current, { x: offset, autoAlpha: 0 });
+      gsap.set(leftRef.current, { x: -offset, autoAlpha: 0 });
+      gsap.set(textRef.current, { color: "#34A8D8" });
+
+      // The first frame fades up as the section arrives.
+      ScrollTrigger.create({
+        trigger: section,
+        start: "top 70%",
+        once: true,
+        onEnter: () =>
+          gsap.to(frames[0], { autoAlpha: 1, duration: 0.9, ease: "power2.out" }),
+      });
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: "+=150%", // half the desktop distance — a shorter scroll on phones
+          pin: true,
+          scrub: 1,
+        },
+      });
+
+      // Both lines glide from off-screen to centre, fading in as they arrive.
+      tl.to(rightRef.current, { x: 0, autoAlpha: 1, ease: "none", duration: 3 }, 0);
+      tl.to(leftRef.current, { x: 0, autoAlpha: 1, ease: "none", duration: 3 }, 0);
+
+      // Flip primary → white as they settle.
+      tl.to(textRef.current, { color: "#F7F8F7", ease: "none", duration: 0.6 }, 2.4);
+
+      // Crossfade through the frames across the whole scroll.
+      frames.slice(1).forEach((frame, i) => {
+        tl.to(frame, { opacity: 1, ease: "none", duration: 1 }, i);
+      });
+
+      // Darken into Workflow over the last stretch.
+      tl.to(section, { backgroundColor: "#0E1312", ease: "none", duration: 1.3 }, 2.7);
+    });
+
+    return () => mm.revert();
   }, []);
 
   return (
@@ -133,7 +193,7 @@ export default function Solution() {
           aria-hidden="true"
           loading="lazy"
           decoding="async"
-          className="absolute left-1/2 top-1/2 z-1 h-auto w-[64%] max-w-250 -translate-x-1/2 -translate-y-1/2"
+          className="absolute left-1/2 top-1/2 z-1 h-auto w-[64%] max-w-250 -translate-x-1/2 -translate-y-1/2 max-md:w-full max-md:max-w-none"
         />
       ))}
 
@@ -141,7 +201,7 @@ export default function Solution() {
       <div className="absolute inset-0 z-10 flex items-center justify-center">
         <div
           ref={textRef}
-          className="flex items-center gap-[0.35em] font-heading text-[3rem] text-primary md:text-[5rem] lg:text-[6rem]"
+          className="flex items-center gap-[0.35em] font-heading text-[3rem] text-primary max-md:flex-col max-md:gap-2 md:text-[5rem] lg:text-[6rem]"
         >
           <span ref={rightSlideRef} className="inline-block">
             <span ref={rightRef} className="inline-block whitespace-nowrap">
