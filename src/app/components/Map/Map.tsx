@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { DesktopIcon, TabletIcon, PhoneIcon } from "./Icons";
+import MapMobile from "./MapMobile";
 
 gsap.registerPlugin(ScrollTrigger);
+
+// Read the breakpoint before paint so the mobile branch renders on the first
+// visible frame (no desktop-stage flash), falling back to useEffect on the
+// server where layout effects don't run.
+const useIsoLayoutEffect =
+  typeof document !== "undefined" ? useLayoutEffect : useEffect;
 
 type Device = "desktop" | "tablet" | "phone";
 
@@ -67,8 +74,20 @@ export default function Map() {
   const [device, setDevice] = useState<Device>("desktop");
   // Locked while the map's one-shot zoom-in intro is playing.
   const [animating, setAnimating] = useState(false);
+  // On phones the whole device-morph experience is dropped for a simpler
+  // tap-to-fullscreen map, so all the desktop choreography below is gated off.
+  const [isMobile, setIsMobile] = useState(false);
+
+  useIsoLayoutEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
+    if (isMobile) return;
     const iframe = iframeRef.current;
     const stage = stageRef.current;
     const frame = frameRef.current;
@@ -150,7 +169,7 @@ export default function Map() {
       window.clearTimeout(unlockTimer);
       st.kill();
     };
-  }, []);
+  }, [isMobile]);
 
   // Reveal on scroll: the heading + toggle rise in as the section arrives, then
   // the device (with the map inside it) fades and scales up as the stage lands.
@@ -160,6 +179,7 @@ export default function Map() {
     const toggle = toggleRef.current;
     const frame = frameRef.current;
     const stage = stageRef.current;
+    if (isMobile) return;
     if (!section || !heading || !toggle || !frame || !stage) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
@@ -193,7 +213,7 @@ export default function Map() {
     }, section);
 
     return () => ctx.revert();
-  }, []);
+  }, [isMobile]);
 
   // Morph the frame to the chosen device. The map stays a fixed-size, centred
   // element and the frame simply crops more or less of it — no map resize, so
@@ -257,6 +277,12 @@ export default function Map() {
         </p>
       </div>
 
+      {/* Phones get a plain tap-to-fullscreen map; desktop keeps the device
+          toggle + morphing stage below. */}
+      {isMobile && <MapMobile />}
+
+      {!isMobile && (
+        <>
       {/* Device toggle — desktop, tablet, phone. Disabled while the intro plays. */}
       <div ref={toggleRef} className="mb-10 flex justify-center">
         <div className="inline-flex items-center gap-1 rounded-full bg-white p-1.5 ">
@@ -324,6 +350,8 @@ export default function Map() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </section>
   );
 }

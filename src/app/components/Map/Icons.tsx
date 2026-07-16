@@ -52,3 +52,21 @@ export function PhoneIcon(props: IconProps) {
     </DeviceSvg>
   );
 }
+
+// Four corner arrows — the "expand to fullscreen" affordance on the mobile map.
+export function ExpandIcon(props: IconProps) {
+  return (
+    <DeviceSvg {...props}>
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" />
+    </DeviceSvg>
+  );
+}
+
+// A plain X — closes the fullscreen map.
+export function CloseIcon(props: IconProps) {
+  return (
+    <DeviceSvg {...props}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </DeviceSvg>
+  );
+}
