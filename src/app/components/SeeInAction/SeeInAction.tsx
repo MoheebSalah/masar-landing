@@ -52,6 +52,10 @@ export default function SeeInAction() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [cursorShown, setCursorShown] = useState(false);
+  // True while a clip is sliding to a new one — the mobile play/fullscreen
+  // controls fade out for the duration and reappear once the clip settles, so
+  // they don't hang in mid-air over the travelling frames.
+  const [transitioning, setTransitioning] = useState(false);
   // The real clip on screen — drives the indicator dots below the frame.
   const [activeDot, setActiveDot] = useState(0);
   // Mobile fullscreen overlay for the current clip.
@@ -287,11 +291,13 @@ export default function SeeInAction() {
     const proxy = proxyRef.current;
     gsap.killTweensOf(proxy);
     proxy.v = from;
+    setTransitioning(true);
     gsap.to(proxy, {
       v: toVirtual,
       duration: 0.6,
       ease: "power3.out",
       onUpdate: () => render(proxy.v),
+      onComplete: () => setTransitioning(false),
     });
   };
 
@@ -407,7 +413,7 @@ export default function SeeInAction() {
             <div className="pointer-events-none absolute inset-0 z-150 flex items-center justify-center md:hidden">
               <span
                 className={`flex h-16 w-16 items-center justify-center rounded-full bg-dark/50 transition-all duration-300 ${
-                  isPlaying ? "scale-75 opacity-0" : "scale-100 opacity-100"
+                  isPlaying || transitioning ? "scale-75 opacity-0" : "scale-100 opacity-100"
                 }`}
               >
                 <PlayIcon className="h-7 w-7 translate-x-0.5 text-white" />
@@ -423,7 +429,9 @@ export default function SeeInAction() {
                 e.stopPropagation();
                 openFullscreen();
               }}
-              className="absolute bottom-3 right-3 z-160 flex h-10 w-10 items-center justify-center rounded-full bg-dark/50 text-white md:hidden"
+              className={`absolute bottom-3 right-3 z-160 flex h-10 w-10 items-center justify-center rounded-full bg-dark/50 text-white transition-opacity duration-200 md:hidden ${
+                transitioning ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
             >
               <FullscreenIcon className="h-5 w-5" />
             </button>
@@ -466,6 +474,8 @@ export default function SeeInAction() {
         <FullscreenPlayer
           src={VIDEOS[activeDot]}
           onClose={() => setFsOpen(false)}
+          onPrev={() => step(-1)}
+          onNext={() => step(1)}
         />
       )}
     </section>

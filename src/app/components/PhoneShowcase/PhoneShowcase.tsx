@@ -141,17 +141,42 @@ export default function PhoneShowcase() {
     const section = sectionRef.current;
     if (!section) return;
     const ctx = gsap.context(() => {
-      gsap.from(".sc-anim", {
-        y: 30,
-        autoAlpha: 0,
-        duration: 0.6,
-        ease: "power2.out",
-        stagger: 0.05,
-        scrollTrigger: {
+      const mm = gsap.matchMedia();
+
+      // Desktop: every phone's internals rise in together — you can see the
+      // whole spread, so animating them all reads as one coordinated reveal.
+      mm.add("(min-width: 768px)", () => {
+        gsap.from(".sc-anim", {
+          y: 30,
+          autoAlpha: 0,
+          duration: 0.6,
+          ease: "power2.out",
+          stagger: 0.05,
+          scrollTrigger: { trigger: section, start: "top 60%", once: true },
+        });
+      });
+
+      // Mobile: only the phone actually centred on screen animates its
+      // internals. The neighbours are blurred/tucked behind it, so animating
+      // their contents is wasted work no one can read — they simply appear.
+      mm.add("(max-width: 767px)", () => {
+        ScrollTrigger.create({
           trigger: section,
           start: "top 60%",
           once: true,
-        },
+          onEnter: () => {
+            const idx = ((Math.round(posRef.current) % N) + N) % N;
+            const slide = slideRefs.current[idx];
+            if (!slide) return;
+            gsap.from(slide.querySelectorAll<HTMLElement>(".sc-anim"), {
+              y: 30,
+              autoAlpha: 0,
+              duration: 0.6,
+              ease: "power2.out",
+              stagger: 0.05,
+            });
+          },
+        });
       });
 
       // The heading, sub-line and the light/dark toggle rise in together as the

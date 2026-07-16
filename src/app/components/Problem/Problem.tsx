@@ -175,7 +175,7 @@ export default function Problem() {
       ref={sectionRef}
       className="relative z-10 h-[300vh] rounded-t-brand bg-background max-md:h-dvh"
     >
-      <div className="sticky top-0 flex h-screen flex-col justify-center gap-10 max-md:h-dvh max-md:gap-6">
+      <div className="sticky top-0 flex h-screen flex-col justify-center gap-10 max-md:h-dvh max-md:gap-10 max-md:py-24">
         {/* Section title — tells visitors this section is about the hurdles of
             keeping roads in repair (what Masar is built to fix). Padding matches
             the grid below so it lines up with the problem words. */}
@@ -183,7 +183,7 @@ export default function Problem() {
           ref={titleRef}
           className="px-8 text-right md:px-16 lg:px-32"
         >
-          <h2 className="font-heading text-h3 text-text lg:text-h2 max-md:text-t1">
+          <h2 className="font-heading text-h3 text-text lg:text-h2 max-md:text-h3">
             تحديات إدارة أضرار الطرق
           </h2>
         </div>
@@ -194,7 +194,7 @@ export default function Problem() {
         <div className="grid w-full grid-cols-[1fr_1.3fr] items-stretch gap-12 px-8 md:px-16 lg:px-32 max-md:flex max-md:flex-col max-md:gap-6">
           {/* Right (start side in RTL) — the problems we solve.
               Spread to match the image's height, top and bottom. */}
-          <div ref={textColRef} className="flex flex-col justify-between text-right max-md:gap-3">
+          <div ref={textColRef} className="flex flex-col justify-between text-right max-md:gap-7">
             {PROBLEMS.map((problem, index) => (
               <ProblemPoint
                 key={problem.word}

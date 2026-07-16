@@ -87,9 +87,10 @@ export default function Navbar() {
     return unsubscribe;
   }, []);
 
-  // Over the hero video the icons are light; once the visitor scrolls onto the
-  // (light) sections below — or the menu drops its light card — they go dark.
-  const mobileDark = scrolled || menuOpen;
+  // The mobile bar keeps its logo + burger white the whole way down the page — a
+  // black gradient behind them (below) guarantees contrast over any section. The
+  // only exception is when the light dropdown card is open, where they go dark.
+  const mobileDark = menuOpen;
 
   return (
     <>
@@ -136,13 +137,18 @@ export default function Navbar() {
           </div>
         </nav>
 
-        {/* Mobile bar — burger (left) + logo (right), transparent with only a
-            faint primary gradient from the top */}
+        {/* Mobile bar — burger (left) + logo (right), transparent with a soft
+            black gradient from the top so the white marks stay legible over any
+            section behind them. The gradient clears when the light card is open. */}
         <div
           ref={mobileBarRef}
           className="relative flex h-20 w-full items-center justify-between px-6 md:hidden"
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-primary/15 to-transparent" />
+          <div
+            className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-black/35 via-black/10 to-transparent transition-opacity duration-300 ${
+              menuOpen ? "opacity-0" : "opacity-100"
+            }`}
+          />
 
           <BurgerButton
             open={menuOpen}
