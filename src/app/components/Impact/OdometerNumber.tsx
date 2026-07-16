@@ -136,7 +136,7 @@ export default function OdometerNumber({ value, prefix, suffix, step }: Props) {
     <div
       ref={rootRef}
       dir="ltr"
-      className="flex items-start font-numeric text-[27rem] font-normal leading-none tabular-nums text-text"
+      className="flex items-start font-numeric text-[6.5rem] font-normal leading-none tabular-nums text-text sm:text-[9rem] md:text-[27rem]"
     >
       {COLUMN_GLYPHS.map((glyphs, i) => (
         <div key={i} className="h-[1em] overflow-hidden">

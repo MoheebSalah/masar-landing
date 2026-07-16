@@ -51,16 +51,16 @@ export default function RollingTitle({ title, step }: Props) {
   }, [step]);
 
   return (
-    <div className="h-12 overflow-hidden">
+    <div className="h-12 overflow-hidden max-md:h-7">
       <div ref={innerRef} className="flex flex-col">
-        <span className="whitespace-nowrap font-sans text-[2rem] font-bold leading-12 text-text">
+        <span className="whitespace-nowrap font-sans text-[2rem] font-bold leading-12 text-text max-md:text-[1.0625rem] max-md:leading-7">
           {current}
         </span>
         {/* The incoming title waits on the clipped second line, kept in normal
             flow so the mask is as wide as the wider of the two titles. */}
         <span
           aria-hidden="true"
-          className="whitespace-nowrap font-sans text-[2rem] font-bold leading-12 text-text"
+          className="whitespace-nowrap font-sans text-[2rem] font-bold leading-12 text-text max-md:text-[1.0625rem] max-md:leading-7"
         >
           {title}
         </span>
