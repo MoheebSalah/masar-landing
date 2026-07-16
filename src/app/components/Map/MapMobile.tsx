@@ -88,77 +88,115 @@ export default function MapMobile() {
   // Never leave scroll frozen if we unmount mid-fullscreen.
   useEffect(() => () => void getLenis()?.start(), []);
 
+  // Open with a GPU transform (translate + scale), NOT by animating width/height.
+  // Growing the box would resize the iframe every frame, forcing MapLibre to
+  // re-render its canvas each tick — the source of the laggy, low-frame feel.
+  // Here the card keeps its own layout size while a scale carries it up to fill
+  // the screen; one crisp reflow lands at the very end, already full-size.
   const openFullscreen = () => {
     const frame = frameRef.current;
     if (!frame || busyRef.current || open) return;
     busyRef.current = true;
 
     const r = frame.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
     scrollYRef.current = getLenis()?.scroll ?? window.scrollY;
     setOpen(true);
     setControls(true);
     getLenis()?.stop();
-    // The map eases a notch closer so the growing card reads as zooming in, not
-    // as uncovering more of the map.
+    // The map eases a notch closer so the zoom reads as moving in, not as
+    // uncovering more of the map.
     post({ type: "masar-zoom", zoom: FULLSCREEN_ZOOM });
 
-    // Pin the card over its current spot, then grow it to fill the viewport.
-    // `right/bottom: auto` is essential: the card carries `inset-0` (which sets
-    // right/bottom to 0), and in this RTL document an over-constrained fixed box
-    // ignores `left` and anchors to `right` instead — which snapped the card to
-    // the screen's right edge before it grew. Clearing them lets left/top win.
+    // Pin the card over its current spot at its own size (no iframe resize).
+    // `right/bottom: auto` clears the `inset-0` right/bottom — in this RTL
+    // document an over-constrained fixed box otherwise ignores `left` and anchors
+    // right. transformOrigin top-left makes the scale grow from that corner.
     gsap.set(frame, {
       position: "fixed",
       zIndex: 100,
       margin: 0,
-      top: r.top,
-      left: r.left,
+      top: 0,
+      left: 0,
       right: "auto",
       bottom: "auto",
       width: r.width,
       height: r.height,
+      transformOrigin: "top left",
+      x: r.left,
+      y: r.top,
       borderRadius: CARD_RADIUS,
     });
     gsap.to(frame, {
-      top: 0,
-      left: 0,
-      width: window.innerWidth,
-      height: window.innerHeight,
+      x: 0,
+      y: 0,
+      scaleX: vw / r.width,
+      scaleY: vh / r.height,
       borderRadius: 0,
-      duration: 0.55,
+      duration: 0.5,
       ease: "power3.inOut",
       onComplete: () => {
-        gsap.set(frame, { width: "100%", height: "100%" });
+        // Snap to a real full-viewport box and drop the transform, so MapLibre
+        // renders once at full resolution — the only reflow, unnoticed because it
+        // lands while already full-screen.
+        gsap.set(frame, {
+          x: 0,
+          y: 0,
+          scaleX: 1,
+          scaleY: 1,
+          width: "100%",
+          height: "100%",
+        });
         busyRef.current = false;
       },
     });
   };
 
+  // Close is the reverse — a scale-DOWN (zoom out) of the full-screen map back
+  // onto the card, again transform-only so it stays smooth. The page is pinned
+  // back to where fullscreen was entered FIRST, while the map still covers the
+  // screen, so the zoom-out uncovers the map section — never a flash of the
+  // section above it.
   const closeFullscreen = () => {
     const frame = frameRef.current;
     const ph = placeholderRef.current;
     if (!frame || !ph || busyRef.current) return;
     busyRef.current = true;
 
-    const r = ph.getBoundingClientRect();
+    const lenis = getLenis();
+    lenis?.scrollTo(scrollYRef.current, { immediate: true, force: true });
+
     post({ type: "masar-zoom", zoom: PREVIEW_ZOOM });
+    const r = ph.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Start from an exact full-viewport box at identity, then scale down onto the
+    // card's rect.
+    gsap.set(frame, {
+      width: vw,
+      height: vh,
+      transformOrigin: "top left",
+      x: 0,
+      y: 0,
+      scaleX: 1,
+      scaleY: 1,
+    });
     gsap.to(frame, {
-      top: r.top,
-      left: r.left,
-      width: r.width,
-      height: r.height,
+      x: r.left,
+      y: r.top,
+      scaleX: r.width / vw,
+      scaleY: r.height / vh,
       borderRadius: CARD_RADIUS,
       duration: 0.5,
       ease: "power3.inOut",
       onComplete: () => {
-        // Drop back to the in-flow card and release everything, then pin the
-        // page exactly where it was opened from so the section doesn't drift.
+        // Drop back to the in-flow card and release everything.
         gsap.set(frame, { clearProps: "all" });
         setOpen(false);
         setControls(false);
-        const lenis = getLenis();
         lenis?.start();
-        lenis?.scrollTo(scrollYRef.current, { immediate: true, force: true });
         busyRef.current = false;
       },
     });
@@ -176,8 +214,10 @@ export default function MapMobile() {
 
   return (
     // The placeholder holds the section's height while the card is fixed, so the
-    // page below never jumps as it opens or closes.
-    <div ref={placeholderRef} className="relative h-[70vh] w-full">
+    // page below never jumps as it opens or closes. Its height is tuned so the
+    // card's aspect ~matches the viewport's: the open/close zoom then scales it
+    // near-uniformly to full-screen, so the map doesn't visibly stretch mid-zoom.
+    <div ref={placeholderRef} className="relative h-[82vh] w-full">
       {/* A plain rounded card holding the map — no device bezel. */}
       <div
         ref={frameRef}

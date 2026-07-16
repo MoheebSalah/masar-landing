@@ -379,7 +379,7 @@ export default function WorkflowMobile() {
       </svg>
 
       {/* Stacked content */}
-      <div className="relative z-10 flex flex-col gap-20">
+      <div className="relative z-10 flex flex-col gap-28">
         {/* Title above the two intro images */}
         <h2
           data-reveal

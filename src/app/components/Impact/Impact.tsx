@@ -86,8 +86,14 @@ export default function Impact() {
       gsap.set(eyebrow, { autoAlpha: 0, y: 24 });
       gsap.set(bulletRow, { autoAlpha: 0, x: 90 });
 
+      // On phones the section is short and near the top when reached, so trigger
+      // the reveal as soon as it enters from the bottom (desktop keeps its later
+      // start, tied to the tall scroll track).
+      const start = window.matchMedia("(max-width: 767px)").matches
+        ? "top 85%"
+        : "top 20%";
       const tl = gsap.timeline({
-        scrollTrigger: { trigger: section, start: "top 20%", once: true },
+        scrollTrigger: { trigger: section, start, once: true },
       });
       tl.to(eyebrow, { autoAlpha: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0)
         .to(

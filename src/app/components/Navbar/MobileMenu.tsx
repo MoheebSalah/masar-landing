@@ -33,10 +33,12 @@ export default function MobileMenu({ open, onClose }: MobileMenuProps) {
         }`}
       />
 
-      {/* The card — holds, then drops and settles; retracts last on close */}
+      {/* The card — holds a beat, then drops fast; retracts fast (and last) on close */}
       <div
-        className={`fixed inset-x-0 top-0 z-45 rounded-b-brand bg-background px-6 pt-24 pb-10 shadow-[0_24px_48px_-24px_rgba(14,19,18,0.35)] transition-transform duration-[650ms] ease-[cubic-bezier(0.7,0,0.25,1)] ${
-          open ? "translate-y-0 delay-100" : "-translate-y-full delay-200"
+        className={`fixed inset-x-0 top-0 z-45 rounded-b-brand bg-background px-6 pt-24 pb-10 shadow-[0_24px_48px_-24px_rgba(14,19,18,0.35)] transition-transform ease-[cubic-bezier(0.65,0,0.2,1)] ${
+          open
+            ? "translate-y-0 delay-100 duration-360"
+            : "-translate-y-full delay-100 duration-300"
         }`}
       >
         <nav className="flex flex-col gap-6 text-right">
@@ -47,15 +49,15 @@ export default function MobileMenu({ open, onClose }: MobileMenuProps) {
               <a
                 href={link.href}
                 onClick={onClose}
-                className={`block font-sans text-h3 font-bold text-text transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                  open ? "translate-y-0" : "translate-y-full"
+                className={`block font-sans text-h3 font-bold text-text transition-transform ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  open ? "translate-y-0 duration-360" : "translate-y-full duration-300"
                 } ${
                   open
                     ? i === 0
-                      ? "delay-[450ms]"
-                      : "delay-[540ms]"
+                      ? "delay-380"
+                      : "delay-460"
                     : i === 0
-                      ? "delay-[70ms]"
+                      ? "delay-60"
                       : "delay-0"
                 }`}
               >

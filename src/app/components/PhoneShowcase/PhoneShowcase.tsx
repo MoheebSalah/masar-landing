@@ -162,7 +162,10 @@ export default function PhoneShowcase() {
       mm.add("(max-width: 767px)", () => {
         ScrollTrigger.create({
           trigger: section,
-          start: "top 60%",
+          // Fire later than desktop so the phone is actually on screen when its
+          // internals animate — otherwise the reveal can finish before the
+          // visitor has scrolled it into view.
+          start: "top 35%",
           once: true,
           onEnter: () => {
             const idx = ((Math.round(posRef.current) % N) + N) % N;
