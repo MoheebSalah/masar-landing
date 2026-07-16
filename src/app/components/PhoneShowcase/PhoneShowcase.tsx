@@ -27,8 +27,11 @@ const TITLES = [
 ];
 const N = TITLES.length;
 
-// Distance (px) between two neighbouring phone centres.
+// Distance (px) between two neighbouring phone centres. On phones the viewport
+// is too narrow for the desktop gap, so the neighbours get tucked closer behind
+// the centred phone.
 const STEP = 310;
+const MOBILE_STEP = 70;
 // Pointer travel below this (px) still counts as a click, not a drag.
 const CLICK_TOLERANCE = 6;
 
@@ -53,11 +56,20 @@ export default function PhoneShowcase() {
 
   // Continuous, unbounded carousel position (slide i shows at virtual ≡ i mod N).
   const virtualRef = useRef(0);
+  // The position actually painted on screen (tracks drags and mid-flight
+  // tweens), so a new gesture can pick up smoothly from wherever the phones are.
+  const posRef = useRef(0);
+  // Neighbour gap in px — swapped for MOBILE_STEP under the md breakpoint.
+  const stepRef = useRef(STEP);
+  // On phones only three phones show (centre + immediate neighbours).
+  const mobileRef = useRef(false);
+  const tweenRef = useRef<gsap.core.Tween | null>(null);
   const switching = useRef(false);
   const drag = useRef({
     down: false,
     dragging: false,
     startX: 0,
+    startPos: 0,
     dx: 0,
     pressedIndex: 0,
   });
@@ -76,6 +88,7 @@ export default function PhoneShowcase() {
   // curves back in depth — off-centre phones drop, tilt, shrink and blur
   // (rather than darken), so the active screen reads as the sharp one in front.
   const render = (virtual: number) => {
+    posRef.current = virtual;
     slideRefs.current.forEach((slide, i) => {
       if (!slide) return;
       let signed = (((i - virtual) % N) + N) % N;
@@ -83,14 +96,17 @@ export default function PhoneShowcase() {
       const d = Math.abs(signed);
       const capped = Math.min(d, 3);
       gsap.set(slide, {
-        x: signed * STEP,
+        x: signed * stepRef.current,
         y: capped * capped * 30,
         rotation: Math.sign(signed) * capped * 12,
         scale: Math.max(0.82, 1 - 0.08 * capped),
         filter: `blur(${capped * 2}px)`,
-        // Full opacity for on-screen phones; only fade the far one as it
-        // teleports across the loop seam.
-        autoAlpha: d > 2.55 ? 0 : d > 2.2 ? (2.55 - d) / 0.35 : 1,
+        // Desktop keeps five phones on screen (only the far one fades across the
+        // loop seam). Mobile shows just three — centre plus the two neighbours —
+        // so anything past the neighbour is faded out.
+        autoAlpha: mobileRef.current
+          ? d > 2 ? 0 : d > 1.5 ? (2 - d) / 0.5 : 1
+          : d > 2.55 ? 0 : d > 2.2 ? (2.55 - d) / 0.35 : 1,
         zIndex: Math.round(100 - d * 10),
         transformOrigin: "50% 50%",
       });
@@ -103,8 +119,20 @@ export default function PhoneShowcase() {
   // set by GSAP, so they must be re-applied synchronously before paint (and
   // before the view transition snapshots the new state).
   useLayoutEffect(() => {
-    render(virtualRef.current);
+    render(posRef.current);
   }, [mode]);
+
+  // Pick the neighbour gap for the current viewport and re-lay the track.
+  useEffect(() => {
+    const applyStep = () => {
+      mobileRef.current = window.innerWidth < 768;
+      stepRef.current = mobileRef.current ? MOBILE_STEP : STEP;
+      render(posRef.current);
+    };
+    applyStep();
+    window.addEventListener("resize", applyStep);
+    return () => window.removeEventListener("resize", applyStep);
+  }, []);
 
   // Appearance animation: once the section scrolls into view, the components
   // inside the rebuilt screens (everything tagged .sc-anim) rise in one after
@@ -151,10 +179,14 @@ export default function PhoneShowcase() {
   // Animate from the current position to a target virtual position.
   const goTo = (target: number) => {
     const rounded = Math.round(target);
-    const proxy = { v: virtualRef.current };
     virtualRef.current = rounded;
     setStep(rounded);
-    gsap.to(proxy, {
+    // Start the glide from wherever the phones currently sit (a released drag,
+    // or an interrupted tween) rather than snapping back to the last settled
+    // slot first.
+    tweenRef.current?.kill();
+    const proxy = { v: posRef.current };
+    tweenRef.current = gsap.to(proxy, {
       v: rounded,
       duration: 0.7,
       ease: "power3.out",
@@ -173,15 +205,18 @@ export default function PhoneShowcase() {
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
+    // Grab wherever the phones are right now, even mid-tween.
+    tweenRef.current?.kill();
     const el = (e.target as HTMLElement).closest("[data-index]");
     drag.current = {
       down: true,
       dragging: false,
       startX: e.clientX,
+      startPos: posRef.current,
       dx: 0,
       pressedIndex: el
         ? Number(el.getAttribute("data-index"))
-        : ((Math.round(virtualRef.current) % N) + N) % N,
+        : ((Math.round(posRef.current) % N) + N) % N,
     };
   };
 
@@ -192,7 +227,7 @@ export default function PhoneShowcase() {
     if (!d.dragging && Math.abs(d.dx) > CLICK_TOLERANCE) d.dragging = true;
     if (!d.dragging) return;
     // Content follows the finger — no ends to rubber-band against.
-    render(virtualRef.current - d.dx / STEP);
+    render(d.startPos - d.dx / stepRef.current);
   };
 
   const onPointerUp = () => {
@@ -203,7 +238,7 @@ export default function PhoneShowcase() {
       goTo(nearest(d.pressedIndex));
       return;
     }
-    goTo(virtualRef.current - d.dx / STEP);
+    goTo(d.startPos - d.dx / stepRef.current);
   };
 
   const onPointerCancel = () => {
