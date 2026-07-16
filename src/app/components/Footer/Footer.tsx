@@ -95,10 +95,10 @@ export default function Footer() {
             arrow is animated on its own for the staircase reveal. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-[64vh] flex justify-center md:top-[41vh]"
+          className="pointer-events-none absolute inset-x-0 top-[78vh] flex justify-center md:top-[41vh]"
         >
           <svg
-            className="footer-mark h-auto w-[150vw] md:w-[94vw]"
+            className="footer-mark h-auto w-[115vw] shrink-0 md:w-[94vw]"
             viewBox="4.5 16.5 47 23"
             fill="currentColor"
           >
