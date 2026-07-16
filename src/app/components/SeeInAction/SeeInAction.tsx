@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { PlayIcon, PauseIcon, ChevronIcon } from "./Icons";
+import { PlayIcon, PauseIcon, ChevronIcon, FullscreenIcon } from "./Icons";
+import FullscreenPlayer from "./FullscreenPlayer";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -53,6 +54,15 @@ export default function SeeInAction() {
   const [cursorShown, setCursorShown] = useState(false);
   // The real clip on screen — drives the indicator dots below the frame.
   const [activeDot, setActiveDot] = useState(0);
+  // Mobile fullscreen overlay for the current clip.
+  const [fsOpen, setFsOpen] = useState(false);
+  // Swipe tracking (touch). A tap fires a click (→ play/pause); a horizontal
+  // drag suppresses the click, so it only ever navigates — no extra guard.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Phones keep every clip paused until tapped; only wider screens autoplay the
+  // centre clip as it scrolls through.
+  const canAutoplay = () => window.matchMedia("(min-width: 768px)").matches;
 
   // Draw the track for a (possibly fractional) virtual position. Each slide is
   // a frame-sized copy centred by xPercent -50; adding signed × one viewport
@@ -177,7 +187,7 @@ export default function SeeInAction() {
         const video = videoRefs.current[mod(activeRef.current, VIDEOS.length)];
         if (!video) return;
         if (entry.isIntersecting) {
-          video.play().catch(() => {});
+          if (canAutoplay()) video.play().catch(() => {});
           // Safety net: reveal even if the clip stalls and never fires
           // onLoadedData, so the stage can't get stuck hidden.
           window.setTimeout(revealStage, 1200);
@@ -213,11 +223,49 @@ export default function SeeInAction() {
     };
   }, []);
 
+  // On phones the clips don't autoplay, so nudge each one to load its first
+  // frame — the paused clip shows a still behind the play button instead of a
+  // blank box. (Desktop keeps preload="none" and lazy-loads on scroll-in.)
+  useEffect(() => {
+    if (!window.matchMedia("(max-width: 767px)").matches) return;
+    videoRefs.current.forEach((v) => {
+      if (v) {
+        v.preload = "metadata";
+        v.load();
+      }
+    });
+  }, []);
+
   const togglePlay = () => {
     const video = videoRefs.current[mod(activeRef.current, VIDEOS.length)];
     if (!video) return;
     if (video.paused) video.play().catch(() => {});
     else video.pause();
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+      // Swipe left → next clip; swipe right → previous.
+      step(dx < 0 ? 1 : -1);
+    }
+  };
+
+  // Open the fullscreen overlay for the current clip; pause the inline one so
+  // only the fullscreen copy plays.
+  const openFullscreen = () => {
+    const video = videoRefs.current[mod(activeRef.current, VIDEOS.length)];
+    if (video && !video.paused) video.pause();
+    setFsOpen(true);
   };
 
   // Settle onto a virtual target from whatever direction it points. The leaving
@@ -233,7 +281,8 @@ export default function SeeInAction() {
     const real = mod(toVirtual, VIDEOS.length);
     setActiveDot(real);
     const arriving = videoRefs.current[real];
-    if (arriving && inViewRef.current) arriving.play().catch(() => {});
+    if (arriving && inViewRef.current && canAutoplay())
+      arriving.play().catch(() => {});
 
     const proxy = proxyRef.current;
     gsap.killTweensOf(proxy);
@@ -273,15 +322,16 @@ export default function SeeInAction() {
       </div>
 
       {/* Video frame with the navigation arrows sitting outside it */}
-      <div className="mx-auto w-full max-w-375 px-8">
+      <div className="mx-auto w-full max-w-375 px-8 max-md:px-3">
         {/* dir=ltr keeps the previous arrow on the left and next on the right */}
         <div dir="ltr" className="flex items-center gap-4 md:gap-6">
-          {/* Previous clip — sits to the left of the video, no backdrop */}
+          {/* Previous clip — sits to the left of the video, no backdrop.
+              Hidden on phones, where navigation is by swipe / dots. */}
           <button
             type="button"
             aria-label="المقطع السابق"
             onClick={() => step(-1)}
-            className="group shrink-0 cursor-pointer p-2"
+            className="group shrink-0 cursor-pointer p-2 max-md:hidden"
           >
             <ChevronIcon className="h-10 w-10 text-primary transition-transform duration-300 group-hover:-translate-x-1.5" />
           </button>
@@ -294,8 +344,10 @@ export default function SeeInAction() {
           <div
             ref={stageRef}
             dir="ltr"
-            className="relative z-0 aspect-video w-full flex-1 cursor-none select-none"
+            className="relative z-0 aspect-video w-full flex-1 select-none md:cursor-none"
             onClick={togglePlay}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
           >
             {VIDEOS.map((src, i) => (
               <div
@@ -316,7 +368,7 @@ export default function SeeInAction() {
                   // object-cover locks every clip into the same frame no matter
                   // its own resolution or aspect ratio. The rounding lives on the
                   // video itself now that the stage no longer clips.
-                  className="h-full w-full rounded-2xl object-cover shadow-lg"
+                  className="h-full w-full rounded-2xl object-cover shadow-lg max-md:rounded-xl"
                   preload="none"
                   loop
                   muted
@@ -328,11 +380,12 @@ export default function SeeInAction() {
               </div>
             ))}
 
-            {/* Custom cursor: the play/pause glyph trailing the pointer. Both
-                stay mounted and cross-fade so switching never jumps. */}
+            {/* Custom cursor (desktop): the play/pause glyph trailing the
+                pointer. Both stay mounted and cross-fade so switching never
+                jumps. */}
             <div
               ref={cursorRef}
-              className={`pointer-events-none absolute left-0 top-0 z-200 text-white transition-opacity duration-200 ${
+              className={`pointer-events-none absolute left-0 top-0 z-200 text-white transition-opacity duration-200 max-md:hidden ${
                 cursorShown ? "opacity-100" : "opacity-0"
               }`}
             >
@@ -347,14 +400,42 @@ export default function SeeInAction() {
                 }`}
               />
             </div>
+
+            {/* Mobile: a fixed play glyph in the centre while the clip is
+                paused. Visual only (pointer-events-none) so taps and swipes are
+                handled by the stage. */}
+            <div className="pointer-events-none absolute inset-0 z-150 flex items-center justify-center md:hidden">
+              <span
+                className={`flex h-16 w-16 items-center justify-center rounded-full bg-dark/50 transition-all duration-300 ${
+                  isPlaying ? "scale-75 opacity-0" : "scale-100 opacity-100"
+                }`}
+              >
+                <PlayIcon className="h-7 w-7 translate-x-0.5 text-white" />
+              </span>
+            </div>
+
+            {/* Mobile: fullscreen control in the corner. stopPropagation keeps
+                the tap from also toggling play/pause. */}
+            <button
+              type="button"
+              aria-label="ملء الشاشة"
+              onClick={(e) => {
+                e.stopPropagation();
+                openFullscreen();
+              }}
+              className="absolute bottom-3 right-3 z-160 flex h-10 w-10 items-center justify-center rounded-full bg-dark/50 text-white md:hidden"
+            >
+              <FullscreenIcon className="h-5 w-5" />
+            </button>
           </div>
 
-          {/* Next clip — sits to the right of the video, no backdrop */}
+          {/* Next clip — sits to the right of the video, no backdrop.
+              Hidden on phones, where navigation is by swipe / dots. */}
           <button
             type="button"
             aria-label="المقطع التالي"
             onClick={() => step(1)}
-            className="group shrink-0 cursor-pointer p-2"
+            className="group shrink-0 cursor-pointer p-2 max-md:hidden"
           >
             <ChevronIcon className="h-10 w-10 rotate-180 text-primary transition-transform duration-300 group-hover:translate-x-1.5" />
           </button>
@@ -379,6 +460,14 @@ export default function SeeInAction() {
           ))}
         </div>
       </div>
+
+      {/* Mobile fullscreen overlay for the current clip */}
+      {fsOpen && (
+        <FullscreenPlayer
+          src={VIDEOS[activeDot]}
+          onClose={() => setFsOpen(false)}
+        />
+      )}
     </section>
   );
 }

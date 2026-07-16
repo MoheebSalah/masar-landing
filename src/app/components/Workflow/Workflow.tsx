@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
 import WorkflowIntro from "./WorkflowIntro";
 import WorkflowCard from "./WorkflowCard";
+import WorkflowMobile from "./WorkflowMobile";
 
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
@@ -74,7 +75,12 @@ export default function Workflow() {
     const label = labelRef.current;
     if (!section || !trail || !marker || !label) return;
 
-    const ctx = gsap.context(() => {
+    // Desktop only: the arrow path is hand-authored against the fixed
+    // 1320×2760 grid this markup lays out on, which can't reflow onto a phone.
+    // Below 768px the desktop grid is hidden and WorkflowMobile takes over with
+    // its own generated route.
+    const mm = gsap.matchMedia();
+    mm.add("(min-width: 768px)", () => {
       // Measure the real path length so the reveal is expressed in the same
       // user units GSAP animates — no reliance on `pathLength`. One dash as
       // long as the whole path, offset by that length = hidden; animating the
@@ -176,9 +182,9 @@ export default function Workflow() {
         },
         0,
       );
-    }, section);
+    });
 
-    return () => ctx.revert();
+    return () => mm.revert();
   }, []);
 
   return (
@@ -187,7 +193,10 @@ export default function Workflow() {
       id="workflow"
       className="relative w-full overflow-hidden bg-dark py-10"
     >
-      <div className="relative mx-auto h-690 w-330">
+      {/* Phones get a purpose-built vertical layout with its own arrow route */}
+      <WorkflowMobile />
+
+      <div className="relative mx-auto hidden h-690 w-330 md:block">
         {/* Arrow route overlay, sized 1:1 with the content coordinate space */}
         <svg
           className="pointer-events-none absolute inset-0 z-0 h-690 w-330"
