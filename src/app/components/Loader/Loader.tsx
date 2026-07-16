@@ -98,10 +98,13 @@ export default function Loader() {
         // Grow the box with a transform (scale), NOT width/height. Animating
         // width/height on this full-viewport element relayouts every frame and
         // registers a stream of layout shifts — it was the entire source of the
-        // page's CLS. Scale is compositor-only, so it shifts nothing. 440×288 is
-        // the box's CSS size (w-110 h-72); 1.15 over-covers so no dark edge peeks.
+        // page's CLS. Scale is compositor-only, so it shifts nothing. Read the
+        // box's live CSS size (it's smaller on phones) so the grow always covers
+        // the viewport; 1.15 over-covers so no dark edge peeks.
+        const boxW = shadowWindow.offsetWidth;
+        const boxH = shadowWindow.offsetHeight;
         const coverScale =
-          Math.max(window.innerWidth / 440, window.innerHeight / 288) * 1.15;
+          Math.max(window.innerWidth / boxW, window.innerHeight / boxH) * 1.15;
         // The frame settled smaller than full scale during the lock; match the
         // dark window to that same scale now so the dark cutout lines up exactly
         // with the detection box before they grow out together.
@@ -206,30 +209,30 @@ export default function Loader() {
           background hides the page inside until the reveal clears it. */}
       <div
         ref={windowRef}
-        className="col-start-1 row-start-1 h-72 w-110 bg-dark shadow-[0_0_0_200vmax_#0E1312]"
+        className="col-start-1 row-start-1 h-52 w-80 bg-dark shadow-[0_0_0_200vmax_#0E1312] md:h-72 md:w-110"
       />
       <img
         ref={potholeRef}
         src="/assets/pothole.webp"
         alt=""
         aria-hidden="true"
-        className="col-start-1 row-start-1 w-140 opacity-0"
+        className="col-start-1 row-start-1 w-96 opacity-0 md:w-140"
       />
       {/* Detection bounding box — glitches, then settles over the pothole.
           The readout tag is a child so it cuts and skews along with the box. */}
       <div
         ref={frameRef}
-        className="relative col-start-1 row-start-1 h-72 w-110 border-4 border-primary bg-primary/40 opacity-0"
+        className="relative col-start-1 row-start-1 h-52 w-80 border-4 border-primary bg-primary/40 opacity-0 md:h-72 md:w-110"
       >
         {/* Class readout on a primary chip, stuck just above the box's top edge */}
         <div
           ref={labelRef}
-          className="absolute bottom-full right-0 mb-2 flex items-center gap-3 bg-primary px-4 py-1.5 font-sans opacity-0"
+          className="absolute bottom-full right-0 mb-2 flex items-center gap-2 bg-primary px-3 py-1 font-sans opacity-0 md:gap-3 md:px-4 md:py-1.5"
         >
-          <span className="text-t1 font-bold text-on-primary">حفرة</span>
+          <span className="text-t3 font-bold text-on-primary md:text-t1">حفرة</span>
           <span
             ref={percentRef}
-            className="text-t1 font-bold tabular-nums text-on-primary"
+            className="text-t3 font-bold tabular-nums text-on-primary md:text-t1"
           >
             00.00%
           </span>
