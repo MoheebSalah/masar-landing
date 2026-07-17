@@ -54,6 +54,31 @@ type DocumentWithVT = Document & {
   };
 };
 
+// The coverflow transform for slide i at a given (fractional) position. The
+// track curves back in depth — off-centre phones drop, tilt, shrink and blur
+// (rather than darken), so the active screen reads as the sharp one in front.
+const slideProps = (i: number, virtual: number, step: number, mobile: boolean) => {
+  let signed = (((i - virtual) % N) + N) % N;
+  if (signed > N / 2) signed -= N;
+  const d = Math.abs(signed);
+  const capped = Math.min(d, 3);
+  return {
+    x: signed * step,
+    y: capped * capped * 30,
+    rotation: Math.sign(signed) * capped * 12,
+    scale: Math.max(0.82, 1 - 0.08 * capped),
+    filter: `blur(${capped * 2}px)`,
+    // Desktop keeps five phones on screen (only the far one fades across the
+    // loop seam). Mobile shows just three — centre plus the two neighbours — so
+    // anything past the neighbour is faded out.
+    autoAlpha: mobile
+      ? d > 2 ? 0 : d > 1.5 ? (2 - d) / 0.5 : 1
+      : d > 2.55 ? 0 : d > 2.2 ? (2.55 - d) / 0.35 : 1,
+    zIndex: Math.round(100 - d * 10),
+    transformOrigin: "50% 50%",
+  };
+};
+
 export default function PhoneShowcase() {
   const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
@@ -113,26 +138,8 @@ export default function PhoneShowcase() {
   const render = (virtual: number) => {
     posRef.current = virtual;
     slideRefs.current.forEach((slide, i) => {
-      if (!slide) return;
-      let signed = (((i - virtual) % N) + N) % N;
-      if (signed > N / 2) signed -= N;
-      const d = Math.abs(signed);
-      const capped = Math.min(d, 3);
-      gsap.set(slide, {
-        x: signed * stepRef.current,
-        y: capped * capped * 30,
-        rotation: Math.sign(signed) * capped * 12,
-        scale: Math.max(0.82, 1 - 0.08 * capped),
-        filter: `blur(${capped * 2}px)`,
-        // Desktop keeps five phones on screen (only the far one fades across the
-        // loop seam). Mobile shows just three — centre plus the two neighbours —
-        // so anything past the neighbour is faded out.
-        autoAlpha: mobileRef.current
-          ? d > 2 ? 0 : d > 1.5 ? (2 - d) / 0.5 : 1
-          : d > 2.55 ? 0 : d > 2.2 ? (2.55 - d) / 0.35 : 1,
-        zIndex: Math.round(100 - d * 10),
-        transformOrigin: "50% 50%",
-      });
+      if (slide)
+        gsap.set(slide, slideProps(i, virtual, stepRef.current, mobileRef.current));
     });
   };
 
@@ -195,30 +202,71 @@ export default function PhoneShowcase() {
         });
       });
 
-      // Mobile: only the phone actually centred on screen animates its
-      // internals. The neighbours are blurred/tucked behind it, so animating
-      // their contents is wasted work no one can read — they simply appear.
+      // Mobile: the centred phone starts EMPTY — its internals are hidden from
+      // the very first frame, so there's no flash of a full screen that then
+      // re-animates — and the two neighbours start stacked flat behind it. On
+      // scroll-in the screen fills element by element, then the two phones tilt
+      // out from behind into their coverflow slots. Only the phones move; their
+      // contents are already there, so nothing re-renders inside them.
       mm.add("(max-width: 767px)", () => {
-        ScrollTrigger.create({
-          trigger: section,
-          // Fire later than desktop so the phone is actually on screen when its
-          // internals animate — otherwise the reveal can finish before the
-          // visitor has scrolled it into view.
-          start: "top 35%",
-          once: true,
-          onEnter: () => {
-            const idx = ((Math.round(posRef.current) % N) + N) % N;
-            const slide = slideRefs.current[idx];
-            if (!slide) return;
-            gsap.from(slide.querySelectorAll<HTMLElement>(".sc-anim"), {
-              y: 30,
-              autoAlpha: 0,
-              duration: 0.6,
-              ease: "power2.out",
-              stagger: 0.05,
-            });
-          },
+        const centreIdx = ((Math.round(posRef.current) % N) + N) % N;
+        const centre = slideRefs.current[centreIdx];
+        const internals = centre
+          ? Array.from(centre.querySelectorAll<HTMLElement>(".sc-anim"))
+          : [];
+        // The two immediate neighbours and the slots they'll settle into.
+        const sides = [1, -1]
+          .map((off) => {
+            const i = (centreIdx + off + N) % N;
+            return {
+              el: slideRefs.current[i],
+              to: slideProps(i, posRef.current, stepRef.current, mobileRef.current),
+            };
+          })
+          .filter(
+            (s): s is { el: HTMLDivElement; to: ReturnType<typeof slideProps> } =>
+              !!s.el,
+          );
+
+        // Empty the centre screen; tuck the neighbours flat behind it.
+        gsap.set(internals, { autoAlpha: 0, y: 30 });
+        sides.forEach((s) =>
+          gsap.set(s.el, {
+            x: 0,
+            rotation: 0,
+            scale: s.to.scale * 0.88,
+            autoAlpha: 0,
+          }),
+        );
+
+        const tl = gsap.timeline({
+          // Fire once the phone is actually on screen, so the reveal doesn't
+          // finish before the visitor has scrolled it into view.
+          scrollTrigger: { trigger: section, start: "top 35%", once: true },
         });
+        // 1. The chosen screen fills in, element by element.
+        tl.to(internals, {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+          stagger: 0.05,
+        });
+        // 2. The two phones tilt out from behind into place, together.
+        sides.forEach((s, k) =>
+          tl.to(
+            s.el,
+            {
+              x: s.to.x,
+              rotation: s.to.rotation,
+              scale: s.to.scale,
+              autoAlpha: s.to.autoAlpha,
+              duration: 0.6,
+              ease: "power3.out",
+            },
+            k === 0 ? "-=0.1" : "<",
+          ),
+        );
       });
 
       // The heading, sub-line and the light/dark toggle rise in together as the
