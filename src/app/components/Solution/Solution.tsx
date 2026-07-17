@@ -146,32 +146,34 @@ export default function Solution() {
         scrollTrigger: {
           trigger: section,
           start: "top top",
-          end: "+=85%", // a shorter pinned scroll than the desktop's
+          end: "+=125%", // a longer pinned scroll so the scene plays out slower
           pin: true,
           scrub: 1,
         },
       });
 
       // Both lines glide from off-screen to centre, fading in as they arrive, and
-      // meet at t=2 (the end of the pinned scroll).
-      const converge = 2;
+      // meet at t=3 (the end of the pinned scroll).
+      const converge = 3;
       tl.to(rightRef.current, { x: 0, autoAlpha: 1, ease: "none", duration: converge }, 0);
       tl.to(leftRef.current, { x: 0, autoAlpha: 1, ease: "none", duration: converge }, 0);
 
       // Darken light → Workflow dark WHILE the lines are still travelling, so the
       // background has already turned by the time they settle — not as a separate
       // beat after they stop.
-      tl.to(section, { backgroundColor: "#0E1312", ease: "none", duration: 1.3 }, 0.4);
+      tl.to(section, { backgroundColor: "#0E1312", ease: "none", duration: 1.6 }, 0.6);
 
       // Flip primary → white during the final stretch of their approach.
-      tl.to(textRef.current, { color: "#F7F8F7", ease: "none", duration: 0.5 }, converge - 0.7);
+      tl.to(textRef.current, { color: "#F7F8F7", ease: "none", duration: 0.6 }, converge - 0.9);
 
-      // Crossfade through the frames so the whole story is told BY the time the
-      // lines meet: the four transitions are packed into the convergence window,
-      // landing the last frame exactly as the sentence settles in the centre.
-      const frameStep = converge / (frames.length - 1);
+      // Crossfade through the five frames. The cues are deliberately uneven: the
+      // third frame is held on screen the longest (its solo stretch dwarfs the
+      // others), so that's the one the visitor lingers on; the last frame lands
+      // just as the sentence settles in the centre.
+      const frameFade = 0.35;
+      const frameCues = [0.35, 0.95, 2.2, 2.65]; // Frame 2, 3, 4, 5 fade-in points
       frames.slice(1).forEach((frame, i) => {
-        tl.to(frame, { opacity: 1, ease: "none", duration: frameStep }, i * frameStep);
+        tl.to(frame, { opacity: 1, ease: "none", duration: frameFade }, frameCues[i]);
       });
     });
 
@@ -208,7 +210,7 @@ export default function Solution() {
       <div className="absolute inset-0 z-10 flex items-center justify-center">
         <div
           ref={textRef}
-          className="flex items-center gap-[0.35em] font-heading text-[3rem] leading-[1.05] text-primary max-md:flex-col max-md:gap-1 md:text-[5rem] lg:text-[6rem] max-md:text-[4.25rem]"
+          className="flex items-center gap-[0.35em] font-heading text-[3rem] leading-[1.05] text-primary max-md:flex-col max-md:gap-12 md:text-[5rem] lg:text-[6rem] max-md:text-[4.5rem]"
         >
           <span ref={rightSlideRef} className="inline-block">
             <span ref={rightRef} className="inline-block whitespace-nowrap">

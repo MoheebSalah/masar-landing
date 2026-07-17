@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ScreenFrame from "./ScreenFrame";
 import RollingTitle from "./RollingTitle";
 import { MoonIcon, SunIcon } from "./Icons";
+import { getLenis } from "../SmoothScroll/lenisInstance";
 import HomeScreen from "./screens/HomeScreen";
 import RecordScreen from "./screens/RecordScreen";
 import CameraScreen from "./screens/CameraScreen";
@@ -53,6 +54,14 @@ export default function PhoneShowcase() {
   const toggleRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const fsScreenRef = useRef<HTMLDivElement>(null);
+  // When the fullscreen overlay was opened — used to swallow the ghost click
+  // that a touchend synthesises right after, which would otherwise land on the
+  // freshly-mounted overlay and close it immediately.
+  const fsOpenedAtRef = useRef(0);
+  // On phones the whole coverflow is scaled down so the section fits one screen;
+  // this holds that factor so the drag stays 1:1 with the finger.
+  const baseScaleRef = useRef(1);
 
   // Continuous, unbounded carousel position (slide i shows at virtual ≡ i mod N).
   const virtualRef = useRef(0);
@@ -78,6 +87,8 @@ export default function PhoneShowcase() {
   // Rounded virtual position: drives the rolling title (monotonic) and the
   // active dot (mod N).
   const [step, setStep] = useState(0);
+  // Phone-only: tapping the centred phone opens that screen fullscreen.
+  const [fsOpen, setFsOpen] = useState(false);
 
   const active = ((step % N) + N) % N;
   const dark = mode === "dark";
@@ -127,6 +138,22 @@ export default function PhoneShowcase() {
     const applyStep = () => {
       mobileRef.current = window.innerWidth < 768;
       stepRef.current = mobileRef.current ? MOBILE_STEP : STEP;
+
+      // On phones the coverflow is a fixed 688px tall (h-172). Scale it down to
+      // whatever height its flex parent can spare, so the heading, toggle,
+      // phones, title and dots always sit within one screen — on any phone.
+      const carousel = carouselRef.current;
+      if (carousel) {
+        if (mobileRef.current) {
+          const avail = carousel.parentElement?.clientHeight ?? carousel.offsetHeight;
+          const s = Math.min(1, avail / carousel.offsetHeight);
+          baseScaleRef.current = s;
+          gsap.set(carousel, { scale: s, transformOrigin: "center center" });
+        } else {
+          baseScaleRef.current = 1;
+          gsap.set(carousel, { clearProps: "scale,transform,transformOrigin" });
+        }
+      }
       render(posRef.current);
     };
     applyStep();
@@ -204,6 +231,30 @@ export default function PhoneShowcase() {
     return () => ctx.revert();
   }, []);
 
+  // Fullscreen: the tapped screen (authored at 402×874) is scaled to fill the
+  // viewport, page scroll is frozen, and Escape / a tap closes it.
+  useEffect(() => {
+    if (!fsOpen) return;
+    const el = fsScreenRef.current;
+    const fit = () => {
+      if (!el) return;
+      const s = Math.min(window.innerWidth / 402, window.innerHeight / 874);
+      gsap.set(el, { scale: s });
+    };
+    fit();
+    getLenis()?.stop();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFsOpen(false);
+    };
+    window.addEventListener("resize", fit);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("resize", fit);
+      window.removeEventListener("keydown", onKey);
+      getLenis()?.start();
+    };
+  }, [fsOpen]);
+
   // Animate from the current position to a target virtual position.
   const goTo = (target: number) => {
     const rounded = Math.round(target);
@@ -254,8 +305,9 @@ export default function PhoneShowcase() {
     d.dx = e.clientX - d.startX;
     if (!d.dragging && Math.abs(d.dx) > CLICK_TOLERANCE) d.dragging = true;
     if (!d.dragging) return;
-    // Content follows the finger — no ends to rubber-band against.
-    render(d.startPos - d.dx / stepRef.current);
+    // Content follows the finger — no ends to rubber-band against. Divide by the
+    // mobile down-scale so the track keeps pace with the finger 1:1.
+    render(d.startPos - d.dx / (stepRef.current * baseScaleRef.current));
   };
 
   const onPointerUp = () => {
@@ -263,10 +315,20 @@ export default function PhoneShowcase() {
     if (!d.down) return;
     d.down = false;
     if (!d.dragging) {
+      // A tap on the phone that's already centred opens it fullscreen (phones
+      // only); tapping a neighbour brings it to the centre instead.
+      const centred = ((Math.round(posRef.current) % N) + N) % N;
+      if (d.pressedIndex === centred) {
+        if (mobileRef.current) {
+          fsOpenedAtRef.current = Date.now();
+          setFsOpen(true);
+        }
+        return;
+      }
       goTo(nearest(d.pressedIndex));
       return;
     }
-    goTo(d.startPos - d.dx / stepRef.current);
+    goTo(d.startPos - d.dx / (stepRef.current * baseScaleRef.current));
   };
 
   const onPointerCancel = () => {
@@ -340,20 +402,20 @@ export default function PhoneShowcase() {
       ref={sectionRef}
       id="app-preview"
       data-mode={mode}
-      className="w-full overflow-hidden bg-(--sec-bg) px-8 py-32"
+      className="w-full overflow-hidden bg-(--sec-bg) px-8 py-32 max-md:flex max-md:h-dvh max-md:flex-col max-md:justify-center max-md:gap-2 max-md:py-6"
     >
       {/* Section heading */}
       <div ref={headingRef} className="mx-auto max-w-3xl text-center">
-        <h2 className="font-heading text-h2 text-(--sec-text)">
+        <h2 className="font-heading text-h2 text-(--sec-text) max-md:text-[1.6rem]">
           تطبيق مسار بين يديك
         </h2>
-        <p className="mx-auto mt-4 max-w-xl font-sans text-t2 text-(--sec-sub)">
+        <p className="mx-auto mt-4 max-w-xl font-sans text-t2 text-(--sec-sub) max-md:mt-1.5 max-md:text-t5">
           استعرض شاشات التطبيق وتنقّل بينها لتكتشف كيف تدير الطرق من مكان واحد.
         </p>
       </div>
 
       {/* Dark / light switch */}
-      <div ref={toggleRef} className="mb-4 mt-6 flex justify-center">
+      <div ref={toggleRef} className="mb-4 mt-6 flex justify-center max-md:mb-0 max-md:mt-3">
         <div className="flex gap-1 rounded-full bg-(--sec-chip) p-1.5">
           <button
             type="button"
@@ -378,32 +440,37 @@ export default function PhoneShowcase() {
         </div>
       </div>
 
-      {/* Infinite draggable coverflow — five phones visible at a time */}
-      <div
-        ref={carouselRef}
-        dir="ltr"
-        className="relative isolate h-172 w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-      >
-        {screens.map((screen, i) => (
-          <div
-            key={`${mode}-${TITLES[i]}`}
-            ref={(el) => {
-              slideRefs.current[i] = el;
-            }}
-            data-index={i}
-            className="absolute left-1/2 top-0 -ml-40 will-change-transform"
-          >
-            <ScreenFrame>{screen}</ScreenFrame>
-          </div>
-        ))}
+      {/* On phones this wrapper fills the leftover height so the coverflow can be
+          scaled to fit it; on desktop it disappears (contents) and the carousel
+          keeps its natural size. */}
+      <div className="contents max-md:flex max-md:min-h-0 max-md:w-full max-md:flex-1 max-md:items-center max-md:justify-center">
+        {/* Infinite draggable coverflow — five phones visible at a time */}
+        <div
+          ref={carouselRef}
+          dir="ltr"
+          className="relative isolate h-172 w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+        >
+          {screens.map((screen, i) => (
+            <div
+              key={`${mode}-${TITLES[i]}`}
+              ref={(el) => {
+                slideRefs.current[i] = el;
+              }}
+              data-index={i}
+              className="absolute left-1/2 top-0 -ml-40 will-change-transform"
+            >
+              <ScreenFrame>{screen}</ScreenFrame>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Current screen title with the rolling swap */}
-      <div className="mt-12 flex justify-center">
+      <div className="mt-12 flex justify-center max-md:mt-2">
         <RollingTitle title={TITLES[active]} step={step} />
       </div>
 
@@ -424,6 +491,44 @@ export default function PhoneShowcase() {
           />
         ))}
       </div>
+
+      {/* Phone-only: the tapped screen blown up to fill the viewport. It lives
+          inside #app-preview so it inherits the same --sv-* theme variables. */}
+      {fsOpen && (
+        <div
+          className="fixed inset-0 z-100 flex items-center justify-center bg-(--sv-bg) md:hidden"
+          onClick={() => {
+            // Ignore the touchend ghost click that fires right after opening.
+            if (Date.now() - fsOpenedAtRef.current < 400) return;
+            setFsOpen(false);
+          }}
+        >
+          <div ref={fsScreenRef} className="origin-center overflow-hidden">
+            {screens[active]}
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFsOpen(false);
+            }}
+            aria-label="إغلاق"
+            className="absolute right-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-(--sv-glass) text-(--sv-glass-text) backdrop-blur-sm"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.4}
+              strokeLinecap="round"
+              className="h-6 w-6"
+              aria-hidden="true"
+            >
+              <path d="M6 6 18 18M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+      )}
     </section>
   );
 }

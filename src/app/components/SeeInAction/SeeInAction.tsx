@@ -181,6 +181,32 @@ export default function SeeInAction() {
     window.addEventListener("pointermove", trackPointer, { passive: true });
     window.addEventListener("scroll", onScroll, { passive: true });
 
+    // Lock a horizontal swipe on the stage to clip navigation. Once the finger
+    // has moved more sideways than vertically, preventDefault stops the page
+    // from scrolling — otherwise a slightly-diagonal swipe sometimes scrolls the
+    // page up instead of switching clips. A mostly-vertical drag is left alone,
+    // so the visitor can still scroll past the section from over the video.
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+    let swipeHorizontal = false;
+    const onStageTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      swipeStartX = t.clientX;
+      swipeStartY = t.clientY;
+      swipeHorizontal = false;
+    };
+    const onStageTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      const dx = t.clientX - swipeStartX;
+      const dy = t.clientY - swipeStartY;
+      if (!swipeHorizontal && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+        swipeHorizontal = true;
+      }
+      if (swipeHorizontal && e.cancelable) e.preventDefault();
+    };
+    stage.addEventListener("touchstart", onStageTouchStart, { passive: true });
+    stage.addEventListener("touchmove", onStageTouchMove, { passive: false });
+
     // Auto-play the selected clip as the section nears view, and pause it once
     // the section leaves. Only the centre clip is ever touched. The bottom
     // rootMargin starts the (preload="none") clip loading ~a third of a screen
@@ -220,6 +246,8 @@ export default function SeeInAction() {
       window.removeEventListener("resize", measure);
       window.removeEventListener("pointermove", trackPointer);
       window.removeEventListener("scroll", onScroll);
+      stage.removeEventListener("touchstart", onStageTouchStart);
+      stage.removeEventListener("touchmove", onStageTouchMove);
       cancelAnimationFrame(scrollRaf);
       observer.disconnect();
       cursorTo.current = null;
@@ -350,7 +378,7 @@ export default function SeeInAction() {
           <div
             ref={stageRef}
             dir="ltr"
-            className="relative z-0 aspect-video w-full flex-1 select-none md:cursor-none"
+            className="relative z-0 aspect-video w-full flex-1 touch-pan-y select-none md:cursor-none"
             onClick={togglePlay}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}

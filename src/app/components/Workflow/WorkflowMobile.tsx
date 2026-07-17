@@ -388,30 +388,17 @@ export default function WorkflowMobile() {
           كيف تسير عملية اكتشاف الحفر ؟
         </h2>
 
-        {/* The two intro images, kept in their side-by-side layout (dir=ltr so
-            the wide image stays on the left, the square one on the right). */}
-        <div dir="ltr" className="flex items-start justify-between gap-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            data-reveal
-            src="/assets/Workflow/Workflow%200%20-%202.webp"
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className="mt-8 aspect-video w-[54%] rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
-          />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            data-reveal
-            src="/assets/Workflow/Workflow%200%20-%201.webp"
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className="aspect-square w-[40%] rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
-          />
-        </div>
+        {/* A single intro image — full width, matching the media cards below. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          data-reveal
+          src="/assets/Workflow/Workflow%200%20-%202.webp"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          className="aspect-video w-full rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
+        />
 
         {STEPS.map((step) => (
           <MobileStep key={step.heading} {...step} />
