@@ -35,6 +35,12 @@ const STEP = 310;
 const MOBILE_STEP = 70;
 // Pointer travel below this (px) still counts as a click, not a drag.
 const CLICK_TOLERANCE = 6;
+// Horizontal travel (px) past which a fullscreen drag flicks to the next /
+// previous screen instead of springing back.
+const FS_SWIPE_THRESHOLD = 60;
+// The authored screen size the fullscreen view scales up from.
+const SCREEN_W = 402;
+const SCREEN_H = 874;
 
 // The section flips between two states: "light" shows light screens on a
 // dark section, "dark" shows dark screens on a light section. All colours
@@ -55,8 +61,14 @@ export default function PhoneShowcase() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const fsScreenRef = useRef<HTMLDivElement>(null);
-  // When the fullscreen overlay was opened — used to swallow the ghost click
-  // that a touchend synthesises right after, which would otherwise land on the
+  const fsOverlayRef = useRef<HTMLDivElement>(null);
+  // True while a fullscreen open / close / swipe tween is running, so a second
+  // gesture can't fire on top of it.
+  const fsBusyRef = useRef(false);
+  // The in-progress fullscreen swipe gesture.
+  const fsDrag = useRef({ down: false, moved: false, startX: 0, startY: 0 });
+  // When the fullscreen overlay was opened — used to swallow the ghost tap that
+  // a touchend synthesises right after, which would otherwise land on the
   // freshly-mounted overlay and close it immediately.
   const fsOpenedAtRef = useRef(0);
   // On phones the whole coverflow is scaled down so the section fits one screen;
@@ -231,20 +243,57 @@ export default function PhoneShowcase() {
     return () => ctx.revert();
   }, []);
 
-  // Fullscreen: the tapped screen (authored at 402×874) is scaled to fill the
-  // viewport, page scroll is frozen, and Escape / a tap closes it.
+  // The scale that fits the authored 402×874 screen into the current viewport.
+  const fitScale = () =>
+    Math.min(window.innerWidth / SCREEN_W, window.innerHeight / SCREEN_H);
+
+  // Close fullscreen with the reverse of the open move: the screen shrinks back
+  // down as the backdrop fades out, then the overlay unmounts.
+  const closeFs = () => {
+    const overlay = fsOverlayRef.current;
+    const el = fsScreenRef.current;
+    if (!overlay) {
+      setFsOpen(false);
+      return;
+    }
+    fsBusyRef.current = true;
+    if (el) gsap.to(el, { scale: fitScale() * 0.6, duration: 0.28, ease: "power2.in" });
+    gsap.to(overlay, {
+      autoAlpha: 0,
+      duration: 0.28,
+      ease: "power2.in",
+      onComplete: () => setFsOpen(false),
+    });
+  };
+
+  // Fullscreen: the tapped screen (authored at 402×874) zooms up to fill the
+  // viewport as the backdrop fades in; page scroll is frozen; Escape / a tap /
+  // the close button run the reverse. Swiping flicks between screens.
   useEffect(() => {
     if (!fsOpen) return;
     const el = fsScreenRef.current;
+    const overlay = fsOverlayRef.current;
+    const s = fitScale();
+    // Grow the screen from a smaller size while the whole overlay fades in.
+    if (el && overlay) {
+      gsap.set(el, { scale: s * 0.6, x: 0, autoAlpha: 1 });
+      gsap.set(overlay, { autoAlpha: 0 });
+      gsap.to(overlay, { autoAlpha: 1, duration: 0.3, ease: "power2.out" });
+      gsap.to(el, {
+        scale: s,
+        duration: 0.45,
+        ease: "power3.out",
+        onComplete: () => {
+          fsBusyRef.current = false;
+        },
+      });
+    }
     const fit = () => {
-      if (!el) return;
-      const s = Math.min(window.innerWidth / 402, window.innerHeight / 874);
-      gsap.set(el, { scale: s });
+      if (el) gsap.set(el, { scale: fitScale() });
     };
-    fit();
     getLenis()?.stop();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFsOpen(false);
+      if (e.key === "Escape") closeFs();
     };
     window.addEventListener("resize", fit);
     window.addEventListener("keydown", onKey);
@@ -253,6 +302,7 @@ export default function PhoneShowcase() {
       window.removeEventListener("keydown", onKey);
       getLenis()?.start();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fsOpen]);
 
   // Animate from the current position to a target virtual position.
@@ -279,6 +329,73 @@ export default function PhoneShowcase() {
     let signed = (((i - v) % N) + N) % N;
     if (signed > N / 2) signed -= N;
     return v + signed;
+  };
+
+  // Fullscreen swipe: slide the current screen out in the drag direction, swap
+  // to the neighbour (dir +1 = next, -1 = previous), then slide it in from the
+  // opposite edge. The carousel underneath is advanced too, so exiting lands on
+  // the same screen. x is divided by the fit scale because the transform is
+  // applied before the scale, so a raw x reads as x·scale on screen.
+  const fsSwipe = (dir: number) => {
+    const el = fsScreenRef.current;
+    if (!el || fsBusyRef.current) return;
+    fsBusyRef.current = true;
+    const off = window.innerWidth / fitScale();
+    gsap.to(el, {
+      x: -dir * off,
+      autoAlpha: 0,
+      duration: 0.2,
+      ease: "power2.in",
+      onComplete: () => {
+        goTo(virtualRef.current + dir);
+        gsap.set(el, { x: dir * off });
+        gsap.to(el, {
+          x: 0,
+          autoAlpha: 1,
+          duration: 0.32,
+          ease: "power3.out",
+          onComplete: () => {
+            fsBusyRef.current = false;
+          },
+        });
+      },
+    });
+  };
+
+  const onFsPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    fsDrag.current = { down: true, moved: false, startX: e.clientX, startY: e.clientY };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const onFsPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = fsDrag.current;
+    if (!d.down || fsBusyRef.current) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (!d.moved && Math.hypot(dx, dy) > CLICK_TOLERANCE) d.moved = true;
+    if (!d.moved) return;
+    // Let the screen trail the finger for feedback.
+    const el = fsScreenRef.current;
+    if (el) gsap.set(el, { x: dx / fitScale() });
+  };
+
+  const onFsPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = fsDrag.current;
+    if (!d.down) return;
+    d.down = false;
+    if (fsBusyRef.current) return;
+    const dx = e.clientX - d.startX;
+    if (!d.moved) {
+      // A tap (not a drag) closes — but not the ghost tap from opening.
+      if (Date.now() - fsOpenedAtRef.current > 300) closeFs();
+      return;
+    }
+    if (Math.abs(dx) > FS_SWIPE_THRESHOLD) {
+      fsSwipe(dx < 0 ? 1 : -1);
+    } else {
+      const el = fsScreenRef.current;
+      if (el) gsap.to(el, { x: 0, duration: 0.3, ease: "power3.out" });
+    }
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -351,16 +468,15 @@ export default function PhoneShowcase() {
 
     const origin = slideRefs.current[active] ?? section;
     const o = origin.getBoundingClientRect();
-    const cx = o.left + o.width / 2;
-    const cy = o.top + o.height / 2;
-    // Big enough to cover the farthest corner of the section.
-    const s = section.getBoundingClientRect();
-    const radius = Math.max(
-      Math.hypot(cx - s.left, cy - s.top),
-      Math.hypot(s.right - cx, cy - s.top),
-      Math.hypot(cx - s.left, s.bottom - cy),
-      Math.hypot(s.right - cx, s.bottom - cy),
-    );
+    // Express the reveal origin as PERCENTAGES of the viewport, not pixels. The
+    // ::view-transition pseudo-element's coordinate space can be sized/scaled
+    // differently from CSS pixels on real mobile browsers (dynamic URL bar,
+    // fractional devicePixelRatio) — absolute px then land in the wrong place
+    // (typically the top-left corner). Percentages are relative to that same
+    // box, so they track the phone's centre on every device. A 150% radius
+    // always reaches the farthest corner whatever the origin.
+    const cx = ((o.left + o.width / 2) / window.innerWidth) * 100;
+    const cy = ((o.top + o.height / 2) / window.innerHeight) * 100;
 
     switching.current = true;
     const transition = doc.startViewTransition(() => {
@@ -371,8 +487,8 @@ export default function PhoneShowcase() {
         document.documentElement.animate(
           {
             clipPath: [
-              `circle(0px at ${cx}px ${cy}px)`,
-              `circle(${radius}px at ${cx}px ${cy}px)`,
+              `circle(0% at ${cx}% ${cy}%)`,
+              `circle(150% at ${cx}% ${cy}%)`,
             ],
           },
           {
@@ -496,21 +612,25 @@ export default function PhoneShowcase() {
           inside #app-preview so it inherits the same --sv-* theme variables. */}
       {fsOpen && (
         <div
-          className="fixed inset-0 z-100 flex items-center justify-center bg-(--sv-bg) md:hidden"
-          onClick={() => {
-            // Ignore the touchend ghost click that fires right after opening.
-            if (Date.now() - fsOpenedAtRef.current < 400) return;
-            setFsOpen(false);
-          }}
+          ref={fsOverlayRef}
+          className="fixed inset-0 z-100 flex touch-none items-center justify-center overflow-hidden bg-(--sv-bg) opacity-0 md:hidden"
+          onPointerDown={onFsPointerDown}
+          onPointerMove={onFsPointerMove}
+          onPointerUp={onFsPointerUp}
+          onPointerCancel={onFsPointerUp}
         >
-          <div ref={fsScreenRef} className="origin-center overflow-hidden">
+          <div
+            ref={fsScreenRef}
+            className="origin-center overflow-hidden will-change-transform"
+          >
             {screens[active]}
           </div>
           <button
             type="button"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
-              setFsOpen(false);
+              closeFs();
             }}
             aria-label="إغلاق"
             className="absolute right-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-(--sv-glass) text-(--sv-glass-text) backdrop-blur-sm"
