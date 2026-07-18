@@ -229,8 +229,10 @@ export default function Footer() {
                   مسار
                 </span>
                 <div className="mt-6 space-y-2.5 text-t5 text-white/70">
-                  <p>© 2026 مسار. جميع الحقوق محفوظة.</p>
-                  <div className="flex items-center gap-5">
+                  {/* Copyright + legal links: desktop only — phones keep just
+                      the "back to top" control below. */}
+                  <p className="max-md:hidden">© 2026 مسار. جميع الحقوق محفوظة.</p>
+                  <div className="flex items-center gap-5 max-md:hidden">
                     <a href="#" className="transition-opacity duration-300 hover:opacity-70">
                       سياسة الخصوصية
                     </a>

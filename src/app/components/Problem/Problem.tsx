@@ -239,7 +239,7 @@ export default function Problem() {
           {/* Left — image of the selected problem */}
           <div
             ref={imageColRef}
-            className="relative aspect-3/2 w-full self-center overflow-hidden rounded-brand max-md:max-h-[42dvh]"
+            className="relative aspect-3/2 w-full self-center overflow-visible rounded-brand max-md:max-h-[42dvh]"
           >
             {PROBLEMS.map((problem, index) => (
               // eslint-disable-next-line @next/next/no-img-element
@@ -250,7 +250,7 @@ export default function Problem() {
                 aria-hidden="true"
                 loading="lazy"
                 decoding="async"
-                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 max-md:object-contain ${index === active ? "opacity-100" : "opacity-0"
+                className={`absolute overflow-visible  inset-0 h-full w-full object-cover transition-opacity duration-500 max-md:object-contain ${index === active ? "opacity-100" : "opacity-0"
                   }`}
               />
             ))}

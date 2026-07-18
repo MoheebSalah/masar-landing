@@ -294,9 +294,8 @@ body {
 }
 
 /*
- * Mobile map button: a "touch me" affordance. A soft ring pulses outward from
- * the button (over a light resting glow), while a diagonal highlight sweeps
- * across it every few seconds — together reading as a shining, alive control.
+ * Mobile map button: a "touch me" affordance — a soft ring pulses outward from
+ * the button over a light resting glow.
  */
 @keyframes map-btn-glow {
   0%,
@@ -316,24 +315,8 @@ body {
   animation: map-btn-glow 2.4s ease-in-out infinite;
 }
 
-@keyframes map-btn-shine {
-  0% {
-    transform: translateX(-160%) skewX(-20deg);
-  }
-  /* Sweep, then hold off-frame so the highlight passes only now and then. */
-  35%,
-  100% {
-    transform: translateX(320%) skewX(-20deg);
-  }
-}
-
-.map-btn-shine {
-  animation: map-btn-shine 3.6s ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .map-btn-glow,
-  .map-btn-shine {
+  .map-btn-glow {
     animation: none;
   }
 }

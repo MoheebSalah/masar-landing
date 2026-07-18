@@ -147,10 +147,8 @@ export default function MapMobile() {
         type="button"
         onClick={openPanel}
         aria-label="افتح الخريطة التفاعلية"
-        className="map-btn-glow relative mx-auto flex items-center gap-3 overflow-hidden rounded-brand bg-primary px-8 py-5 transition-transform duration-200 active:scale-95"
+        className="map-btn-glow relative mx-auto flex items-center gap-3 rounded-brand bg-primary px-8 py-5 transition-transform duration-200 active:scale-95"
       >
-        {/* Diagonal highlight that sweeps across the button. */}
-        <span className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 map-btn-shine bg-gradient-to-r from-transparent via-white/45 to-transparent" />
         <MapIcon className="relative h-7 w-7 text-white" />
         <span className="relative font-sans text-t2 text-white">
           افتح الخريطة التفاعلية

@@ -111,6 +111,11 @@ export default function PhoneShowcase() {
   const mobileRef = useRef(false);
   const tweenRef = useRef<gsap.core.Tween | null>(null);
   const switching = useRef(false);
+  // True from when the mobile entrance is armed until its tilt finishes. While
+  // set, render() and pointer gestures are held off so a stray resize (mobile
+  // URL bar) or a scroll-touch can't overwrite the in-flight tilt — that
+  // overwrite was the "phones snap into place" glitch.
+  const entranceActiveRef = useRef(false);
   const drag = useRef({
     down: false,
     dragging: false,
@@ -136,6 +141,9 @@ export default function PhoneShowcase() {
   // curves back in depth — off-centre phones drop, tilt, shrink and blur
   // (rather than darken), so the active screen reads as the sharp one in front.
   const render = (virtual: number) => {
+    // While the entrance tilt is running, leave the slides to the timeline —
+    // re-laying them here (from a resize or drag) would snap them into place.
+    if (entranceActiveRef.current) return;
     posRef.current = virtual;
     slideRefs.current.forEach((slide, i) => {
       if (slide)
@@ -228,21 +236,24 @@ export default function PhoneShowcase() {
               !!s.el,
           );
 
-        // Empty the centre screen; tuck the neighbours flat behind it.
+        // Hold render() and pointer gestures off until the tilt finishes.
+        entranceActiveRef.current = true;
+
+        // Empty the centre screen; tuck the neighbours flat behind it. They keep
+        // their final scale/blur so the tilt only animates transform + opacity —
+        // cheap, GPU-composited props (no per-frame scale or filter work).
         gsap.set(internals, { autoAlpha: 0, y: 30 });
         sides.forEach((s) =>
-          gsap.set(s.el, {
-            x: 0,
-            rotation: 0,
-            scale: s.to.scale * 0.88,
-            autoAlpha: 0,
-          }),
+          gsap.set(s.el, { x: 0, rotation: 0, autoAlpha: 0 }),
         );
 
         const tl = gsap.timeline({
           // Fire once the phone is actually on screen, so the reveal doesn't
           // finish before the visitor has scrolled it into view.
           scrollTrigger: { trigger: section, start: "top 35%", once: true },
+          onComplete: () => {
+            entranceActiveRef.current = false;
+          },
         });
         // 1. The chosen screen fills in, element by element.
         tl.to(internals, {
@@ -259,14 +270,17 @@ export default function PhoneShowcase() {
             {
               x: s.to.x,
               rotation: s.to.rotation,
-              scale: s.to.scale,
               autoAlpha: s.to.autoAlpha,
-              duration: 0.6,
+              duration: 0.55,
               ease: "power3.out",
             },
             k === 0 ? "-=0.1" : "<",
           ),
         );
+
+        return () => {
+          entranceActiveRef.current = false;
+        };
       });
 
       // The heading, sub-line and the light/dark toggle rise in together as the
@@ -448,6 +462,10 @@ export default function PhoneShowcase() {
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    // During the entrance tilt, let touches pass straight through to the page
+    // (touch-pan-y still scrolls) instead of starting a drag that would snap the
+    // phones — the entrance plays out uninterrupted.
+    if (entranceActiveRef.current) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     // Grab wherever the phones are right now, even mid-tween.
     tweenRef.current?.kill();

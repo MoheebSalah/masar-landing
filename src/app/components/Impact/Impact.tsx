@@ -141,7 +141,9 @@ export default function Impact() {
     scrollToStep(i);
   };
 
-  // Phone-only left/right swipe to move between stats (wraps around the ends).
+  // Phone-only up/down swipe to move between stats (wraps around the ends). The
+  // number block opts out of page scroll (touch-none) so a vertical drag there
+  // is ours to read as navigation.
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
     if (!isMobile()) return;
@@ -155,12 +157,27 @@ export default function Impact() {
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
-    // Only a mostly-horizontal drag navigates; vertical scroll is left alone.
-    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
-      const dir = dx < 0 ? 1 : -1; // swipe left → next stat
+    // Only a mostly-vertical drag navigates.
+    if (Math.abs(dy) > 45 && Math.abs(dy) > Math.abs(dx)) {
+      const dir = dy < 0 ? 1 : -1; // swipe up → next stat
       setStep((prev) => (prev + dir + N) % N);
     }
   };
+
+  // The clickable indicator dots (a vertical rail). Rendered both as the desktop
+  // right-edge column and, on phones, right beside the number.
+  const renderDots = () =>
+    STATS.map((s, i) => (
+      <button
+        key={s.title}
+        type="button"
+        onClick={() => selectStat(i)}
+        aria-label={s.title}
+        className={`cursor-pointer rounded-full transition-all duration-300 ${
+          i === step ? "h-9 w-2.5 bg-primary" : "h-2.5 w-2.5 bg-muted hover:bg-light"
+        }`}
+      />
+    ));
 
   const stat = STATS[step];
 
@@ -176,11 +193,7 @@ export default function Impact() {
     >
       {/* translateZ promotes the pinned panel to its own layer on phones, so the
           giant sticky number no longer shimmers against Lenis' sub-pixel scroll. */}
-      <div
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        className="sticky top-0 flex h-screen flex-col items-center justify-center max-md:static max-md:h-auto max-md:py-24 max-md:[transform:translateZ(0)]"
-      >
+      <div className="sticky top-0 flex h-screen flex-col items-center justify-center max-md:static max-md:h-auto max-md:py-24 max-md:[transform:translateZ(0)]">
         {/* Content column matches the showcase width; everything is anchored to
             its right (start) edge so the number and bullet share a right edge. */}
         <div className="w-full max-w-375 px-8">
@@ -189,8 +202,18 @@ export default function Impact() {
             أرقامٌ تعكس أثراً ملموساً
           </p>
 
-          {/* The giant odometer number, pinned to the start (right) edge */}
-          <div className="flex">
+          {/* The giant odometer number. On phones the indicator rail sits at its
+              right (start) edge and a vertical swipe here moves between stats —
+              so the number block opts out of page scroll with touch-none. */}
+          <div
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            className="flex items-center gap-5 max-md:touch-none"
+          >
+            {/* Phone-only vertical indicator rail, to the right of the number. */}
+            <div className="hidden shrink-0 flex-col items-center gap-3 max-md:flex">
+              {renderDots()}
+            </div>
             <OdometerNumber
               value={stat.value}
               prefix={stat.prefix}
@@ -202,28 +225,15 @@ export default function Impact() {
           {/* Bullet + title, sharing the number's right edge (bullet first, so
               in RTL it sits on the right with the title flowing left). */}
           <div ref={bulletRowRef} className="mt-6 flex items-center gap-5 max-md:mt-4 max-md:gap-3">
-            <ArrowBullet className="h-10 w-auto shrink-0 text-primary max-md:h-7" />
+            <ArrowBullet className="h-10 w-auto shrink-0 text-primary max-md:h-6" />
             <RollingTitle title={stat.title} step={step} />
           </div>
         </div>
 
-        {/* Clickable progress indicator: vertical on the right edge for desktop;
-            on phones it sits in the normal flow just below the content, a short
-            horizontal row (no longer floating at the far bottom of the screen). */}
-        <div className="absolute right-10 top-1/2 flex -translate-y-1/2 flex-col items-center gap-3 max-md:static max-md:mt-10 max-md:translate-x-0 max-md:translate-y-0 max-md:flex-row max-md:gap-4">
-          {STATS.map((s, i) => (
-            <button
-              key={s.title}
-              type="button"
-              onClick={() => selectStat(i)}
-              aria-label={s.title}
-              className={`cursor-pointer rounded-full transition-all duration-300 ${
-                i === step
-                  ? "h-9 w-2.5 bg-primary max-md:h-2.5 max-md:w-9"
-                  : "h-2.5 w-2.5 bg-muted hover:bg-light"
-              }`}
-            />
-          ))}
+        {/* Desktop clickable progress indicator: a vertical rail on the right
+            edge. On phones the rail lives beside the number instead (above). */}
+        <div className="absolute right-10 top-1/2 hidden -translate-y-1/2 flex-col items-center gap-3 md:flex">
+          {renderDots()}
         </div>
       </div>
     </section>

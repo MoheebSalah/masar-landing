@@ -148,7 +148,12 @@ export default function Solution() {
           start: "top top",
           end: "+=125%", // a longer pinned scroll so the scene plays out slower
           pin: true,
-          scrub: 1,
+          // Pin a hair early so the switch to fixed lands before the section
+          // fully meets the top — removes the "catch" as the pin engages.
+          anticipatePin: 1,
+          // Smaller scrub lag so the scene tracks the finger closely and the pin
+          // releases without the animation still visibly catching up.
+          scrub: 0.5,
         },
       });
 
