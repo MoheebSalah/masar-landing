@@ -95,10 +95,10 @@ export default function Footer() {
             arrow is animated on its own for the staircase reveal. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-[78vh] flex justify-center md:top-[41vh]"
+          className="pointer-events-none absolute inset-x-0 top-[70vh] flex justify-center md:top-[41vh]"
         >
           <svg
-            className="footer-mark h-auto w-[115vw] shrink-0 md:w-[94vw]"
+            className="footer-mark h-auto w-[160vw] shrink-0 md:w-[94vw]"
             viewBox="4.5 16.5 47 23"
             fill="currentColor"
           >
@@ -229,8 +229,10 @@ export default function Footer() {
                   مسار
                 </span>
                 <div className="mt-6 space-y-2.5 text-t5 text-white/70">
-                  <p>© 2026 مسار. جميع الحقوق محفوظة.</p>
-                  <div className="flex items-center gap-5">
+                  {/* Copyright + legal links: desktop only — phones keep just
+                      the "back to top" control below. */}
+                  <p className="max-md:hidden">© 2026 مسار. جميع الحقوق محفوظة.</p>
+                  <div className="flex items-center gap-5 max-md:hidden">
                     <a href="#" className="transition-opacity duration-300 hover:opacity-70">
                       سياسة الخصوصية
                     </a>

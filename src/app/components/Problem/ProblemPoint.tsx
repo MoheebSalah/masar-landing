@@ -13,14 +13,44 @@ export default function ProblemPoint({
 }: ProblemPointProps) {
   return (
     <div className="text-right">
+      {/* The whole row is the button — on phones that spans the title, the gap
+          and the indicator arrow on the left, so a tap anywhere along it selects
+          the point. Desktop stays a content-width button around just the word. */}
       <button
         type="button"
         onClick={onSelect}
-        className={`cursor-pointer font-heading text-[6rem] leading-[1.05] transition-colors duration-300 max-md:text-[2.5rem] ${
-          active ? "text-primary" : "text-muted hover:text-subtext"
-        }`}
+        className="group cursor-pointer max-md:flex max-md:w-full max-md:items-center max-md:justify-between max-md:gap-4"
       >
-        {word}
+        <span
+          className={`font-heading text-[6rem] leading-[1.05] transition-colors duration-300 max-md:text-[3.25rem] ${
+            active ? "text-primary" : "text-muted group-hover:text-subtext"
+          }`}
+        >
+          {word}
+        </span>
+
+        {/* Indicator chevron (phones only): points up while collapsed, flips
+            down when this point is expanded (active). The flip eases smoothly. */}
+        <span
+          aria-hidden="true"
+          className={`hidden shrink-0 transition-colors duration-300 max-md:block ${
+            active ? "text-primary" : "text-muted"
+          }`}
+        >
+          <svg
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`h-6 w-6 transition-transform duration-300 ease-out ${
+              active ? "rotate-0" : "rotate-180"
+            }`}
+          >
+            <path d="M2.5 4.5 L6 8 L9.5 4.5" />
+          </svg>
+        </span>
       </button>
 
       {/* Sentence expands only for the active point (0fr → 1fr row trick) */}

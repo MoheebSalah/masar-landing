@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PlayIcon, CloseIcon } from "./Icons";
+import { PlayIcon, CloseIcon, ChevronIcon } from "./Icons";
 import { getLenis } from "../SmoothScroll/lenisInstance";
 
 type FullscreenPlayerProps = {
   src: string;
   onClose: () => void;
+  /** Step the carousel back a clip (also updates the inline stage). */
+  onPrev: () => void;
+  /** Step the carousel forward a clip. */
+  onNext: () => void;
 };
 
 /**
@@ -19,7 +23,12 @@ type FullscreenPlayerProps = {
  * hides the browser chrome where supported; the fixed overlay covers the
  * viewport regardless). Tap toggles play/pause.
  */
-export default function FullscreenPlayer({ src, onClose }: FullscreenPlayerProps) {
+export default function FullscreenPlayer({
+  src,
+  onClose,
+  onPrev,
+  onNext,
+}: FullscreenPlayerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(true);
@@ -48,6 +57,15 @@ export default function FullscreenPlayer({ src, onClose }: FullscreenPlayerProps
       getLenis()?.start();
     };
   }, [onClose]);
+
+  // When the clip changes (fullscreen prev/next), reload and resume playback —
+  // the overlay and native fullscreen stay put across the swap.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.load();
+    v.play().catch(() => {});
+  }, [src]);
 
   const close = () => {
     // In native fullscreen, exiting fires `fullscreenchange`, which closes us;
@@ -104,6 +122,31 @@ export default function FullscreenPlayer({ src, onClose }: FullscreenPlayerProps
           <PlayIcon className="h-8 w-8 translate-x-0.5 text-white" />
         </span>
       </div>
+
+      {/* Navigate between clips without leaving fullscreen. dir=ltr order:
+          previous on the left, next on the right. */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onPrev();
+        }}
+        aria-label="المقطع السابق"
+        className="absolute left-4 top-1/2 z-30 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-dark/50 text-white"
+      >
+        <ChevronIcon className="h-6 w-6" />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onNext();
+        }}
+        aria-label="المقطع التالي"
+        className="absolute right-4 top-1/2 z-30 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-dark/50 text-white"
+      >
+        <ChevronIcon className="h-6 w-6 rotate-180" />
+      </button>
 
       {/* Exit */}
       <button

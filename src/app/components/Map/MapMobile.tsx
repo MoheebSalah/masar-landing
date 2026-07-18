@@ -3,40 +3,35 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { getLenis } from "../SmoothScroll/lenisInstance";
-import { CloseIcon, ExpandIcon } from "./Icons";
+import { CloseIcon, MapIcon } from "./Icons";
 
-// The phone version of the map: no device toggle, no morph. A single map window
-// sits inline inside a dark bezel (so it reads as a device/window); tapping it
-// grows that same window to fullscreen (GSAP animates its rect + corners while
-// the map eases in a notch, so it feels like opening rather than just revealing
-// more map). A cross shrinks it back. The intro (regional → Hebron zoom-in)
-// fires the first time the window scrolls into view.
+// The phone version of the map. Instead of an inline map card, the section shows
+// a single glowing "open the map" button below the heading. Tapping it slides a
+// full-screen map panel in from the right; the visitor pans/zooms freely, and
+// closing slides it back out — restoring the exact scroll position they left, so
+// the map never costs them their place on the page. The regional → Hebron intro
+// plays the first time the panel opens.
 
-// The zoom the map rests at (matches the map's HEBRON_DEFAULT_ZOOM) and the
-// slightly closer framing it eases to while going fullscreen.
-const PREVIEW_ZOOM = 12.6;
-const FULLSCREEN_ZOOM = 13.6;
-// Bezel geometry, shared by the CSS classes and the GSAP tweens.
-const FRAME_RADIUS = "2rem"; // rounded-brand (32px)
-const SCREEN_RADIUS = "1.375rem"; // frame radius minus the bezel padding
-const BEZEL = "0.625rem"; // p-2.5
+// How long the panel takes to slide in / out.
+const SLIDE_DURATION = 0.55;
 
 export default function MapMobile() {
-  const placeholderRef = useRef<HTMLDivElement>(null);
-  const frameRef = useRef<HTMLDivElement>(null);
-  const screenRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const busyRef = useRef(false);
-  const playRequestedRef = useRef(false);
+  // The map plays its zoom-in intro the first time the panel is opened.
+  const introRequestedRef = useRef(false);
+  // The scroll position the panel was opened from, restored on close so exiting
+  // never drops the visitor to a different spot on the page.
+  const scrollYRef = useRef(0);
   const [open, setOpen] = useState(false);
 
   const post = (msg: Record<string, unknown>) =>
     iframeRef.current?.contentWindow?.postMessage(msg, "*");
 
-  // Toggle the map's own zoom (+/–) control. Injected as a style into the map
-  // document (same origin) so it stays hidden on the preview and returns in
-  // fullscreen; the attribution stays put.
-  const setControls = (visible: boolean) => {
+  // Show the map's own zoom (+/–) control — it lives hidden by default and is
+  // only wanted now the map is a full, interactive surface.
+  const showControls = () => {
     const doc = iframeRef.current?.contentDocument;
     if (!doc || !doc.head) return;
     let style = doc.getElementById("masar-ctrl-hide") as HTMLStyleElement | null;
@@ -45,134 +40,100 @@ export default function MapMobile() {
       style.id = "masar-ctrl-hide";
       doc.head.appendChild(style);
     }
-    style.textContent = visible
-      ? ""
-      : ".maplibregl-ctrl-top-left{display:none !important;}";
+    style.textContent = "";
   };
 
-  // Play the intro once, the first time the window is on screen. The map rests
-  // at its regional framing until it hears "masar-play", so triggering it here
-  // (not on load) means the zoom-in actually plays as the visitor arrives.
-  useEffect(() => {
-    const el = placeholderRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !playRequestedRef.current) {
-          playRequestedRef.current = true;
-          post({ type: "masar-play" });
-          io.disconnect();
-        }
-      },
-      { threshold: 0.35 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  // If the map only finishes booting after we've asked to play, replay once it
-  // announces itself (mirrors the desktop handshake).
+  // If the map only finishes booting after we've asked it to play, replay once
+  // it announces itself (mirrors the desktop handshake).
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.source !== iframeRef.current?.contentWindow) return;
       if ((e.data as { type?: string })?.type === "masar-ready") {
-        setControls(open);
-        if (playRequestedRef.current) post({ type: "masar-play" });
+        showControls();
+        if (introRequestedRef.current) post({ type: "masar-play" });
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [open]);
+  }, []);
 
-  // Never leave scroll frozen if we unmount mid-fullscreen.
-  useEffect(() => () => void getLenis()?.start(), []);
+  // Never leave scroll frozen (or the page overflow-clipped) if we unmount while
+  // the panel is open.
+  useEffect(
+    () => () => {
+      getLenis()?.start();
+      document.documentElement.style.overflowX = "";
+    },
+    [],
+  );
 
-  const openFullscreen = () => {
-    const frame = frameRef.current;
-    const screen = screenRef.current;
-    if (!frame || !screen || busyRef.current || open) return;
+  // Slide the full-screen map in from the right. The panel is display:none at
+  // rest, so it never adds page height or a stray horizontal scrollbar; opening
+  // reveals it, parks it one screen to the right (xPercent 100) and eases it to
+  // 0. Scroll is locked and the page is overflow-clipped for the duration, so
+  // the off-screen panel can't scroll the page sideways mid-slide. In this RTL
+  // document GSAP's transform is still physical, so xPercent 100 is always "one
+  // screen to the right".
+  const openPanel = () => {
+    const panel = panelRef.current;
+    if (!panel || busyRef.current || open) return;
     busyRef.current = true;
 
-    const r = frame.getBoundingClientRect();
-    setOpen(true);
-    setControls(true);
+    scrollYRef.current = getLenis()?.scroll ?? window.scrollY;
     getLenis()?.stop();
-    // The map eases a notch closer so the growing window reads as zooming in,
-    // not as uncovering more of the map.
-    post({ type: "masar-zoom", zoom: FULLSCREEN_ZOOM });
+    document.documentElement.style.overflowX = "clip";
+    setOpen(true);
+    showControls();
 
-    // Pin the frame over its current spot, then grow it to fill the viewport.
-    gsap.set(frame, {
-      position: "fixed",
-      zIndex: 100,
-      margin: 0,
-      top: r.top,
-      left: r.left,
-      width: r.width,
-      height: r.height,
-      borderRadius: FRAME_RADIUS,
-      padding: BEZEL,
-    });
-    gsap.to(frame, {
-      top: 0,
-      left: 0,
-      width: window.innerWidth,
-      height: window.innerHeight,
-      borderRadius: 0,
-      padding: 0,
-      duration: 0.55,
-      ease: "power3.inOut",
+    // Play the zoom-in intro the first time the map is revealed.
+    if (!introRequestedRef.current) {
+      introRequestedRef.current = true;
+      post({ type: "masar-play" });
+    }
+
+    gsap.set(panel, { display: "block", xPercent: 100 });
+    gsap.to(panel, {
+      xPercent: 0,
+      duration: SLIDE_DURATION,
+      ease: "power3.out",
       onComplete: () => {
-        gsap.set(frame, { width: "100%", height: "100%" });
+        document.documentElement.style.overflowX = "";
         busyRef.current = false;
       },
     });
-    gsap.to(screen, {
-      borderRadius: 0,
-      duration: 0.55,
-      ease: "power3.inOut",
-    });
   };
 
-  const closeFullscreen = () => {
-    const frame = frameRef.current;
-    const screen = screenRef.current;
-    const ph = placeholderRef.current;
-    if (!frame || !screen || !ph || busyRef.current) return;
+  // Slide the panel back off to the right and hand the page back exactly where
+  // it was. The scroll is pinned first (while the map still covers the screen),
+  // then the slide-out uncovers the map section underneath — never a flash of a
+  // different section.
+  const closePanel = () => {
+    const panel = panelRef.current;
+    if (!panel || busyRef.current || !open) return;
     busyRef.current = true;
 
-    const r = ph.getBoundingClientRect();
-    post({ type: "masar-zoom", zoom: PREVIEW_ZOOM });
-    gsap.to(frame, {
-      top: r.top,
-      left: r.left,
-      width: r.width,
-      height: r.height,
-      borderRadius: FRAME_RADIUS,
-      padding: BEZEL,
-      duration: 0.5,
-      ease: "power3.inOut",
+    const lenis = getLenis();
+    lenis?.scrollTo(scrollYRef.current, { immediate: true, force: true });
+    document.documentElement.style.overflowX = "clip";
+
+    gsap.to(panel, {
+      xPercent: 100,
+      duration: SLIDE_DURATION,
+      ease: "power3.in",
       onComplete: () => {
-        // Drop back to the in-flow preview and release everything.
-        gsap.set(frame, { clearProps: "all" });
-        gsap.set(screen, { clearProps: "borderRadius" });
+        gsap.set(panel, { display: "none", clearProps: "transform" });
+        document.documentElement.style.overflowX = "";
         setOpen(false);
-        setControls(false);
-        getLenis()?.start();
+        lenis?.start();
         busyRef.current = false;
       },
     });
-    gsap.to(screen, {
-      borderRadius: SCREEN_RADIUS,
-      duration: 0.5,
-      ease: "power3.inOut",
-    });
   };
 
-  // Esc closes fullscreen (defined after closeFullscreen so it can call it).
+  // Esc / the Android back-gesture-as-Escape closes the panel.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) closeFullscreen();
+      if (e.key === "Escape" && open) closePanel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -180,54 +141,42 @@ export default function MapMobile() {
   }, [open]);
 
   return (
-    // The placeholder holds the section's height while the frame is fixed, so
-    // the page below never jumps as it opens or closes.
-    <div ref={placeholderRef} className="relative h-[70vh] w-full">
-      {/* Dark bezel — makes the map read as a device window. */}
-      <div
-        ref={frameRef}
-        className="absolute inset-0 rounded-brand bg-dark p-2.5 shadow-[0_8px_30px_-16px_rgba(14,19,18,0.35)]"
+    <>
+      {/* The tap target: a glowing primary button that opens the map. */}
+      <button
+        type="button"
+        onClick={openPanel}
+        aria-label="افتح الخريطة التفاعلية"
+        className="map-btn-glow relative mx-auto flex items-center gap-3 rounded-brand bg-primary px-8 py-5 transition-transform duration-200 active:scale-95"
       >
-        <div
-          ref={screenRef}
-          className="relative h-full w-full overflow-hidden rounded-[1.375rem] bg-background"
+        <MapIcon className="relative h-7 w-7 text-white" />
+        <span className="relative font-sans text-t2 text-white">
+          افتح الخريطة التفاعلية
+        </span>
+      </button>
+
+      {/* Full-screen map panel — display:none at rest, slid in on open. */}
+      <div
+        ref={panelRef}
+        aria-hidden={!open}
+        className="fixed inset-0 z-[100] hidden bg-background"
+      >
+        <iframe
+          ref={iframeRef}
+          src="/masar-map.html"
+          title="خريطة مسار للحُفر في الخليل"
+          className="h-full w-full border-0"
+        />
+
+        <button
+          type="button"
+          onClick={closePanel}
+          aria-label="إغلاق الخريطة"
+          className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white text-text shadow-[0_8px_30px_-16px_rgba(14,19,18,0.4)]"
         >
-          <iframe
-            ref={iframeRef}
-            src="/masar-map.html"
-            title="خريطة مسار للحُفر في الخليل"
-            onLoad={() => setControls(false)}
-            className={`h-full w-full border-0 ${open ? "" : "pointer-events-none"}`}
-          />
-        </div>
-
-        {/* Preview: a full-window tap target that expands the map. */}
-        {!open && (
-          <button
-            type="button"
-            onClick={openFullscreen}
-            aria-label="توسيع الخريطة"
-            className="absolute inset-0 flex items-end justify-center"
-          >
-            <span className="mb-6 flex items-center gap-2 rounded-full bg-dark/70 px-5 py-2.5 font-sans text-t5 text-white backdrop-blur-sm">
-              <ExpandIcon className="h-4 w-4" />
-              اضغط لفتح الخريطة
-            </span>
-          </button>
-        )}
-
-        {/* Fullscreen: exit back to the preview. */}
-        {open && (
-          <button
-            type="button"
-            onClick={closeFullscreen}
-            aria-label="إغلاق الخريطة"
-            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white text-text shadow-[0_8px_30px_-16px_rgba(14,19,18,0.4)]"
-          >
-            <CloseIcon className="h-5 w-5" />
-          </button>
-        )}
+          <CloseIcon className="h-5 w-5" />
+        </button>
       </div>
-    </div>
+    </>
   );
 }

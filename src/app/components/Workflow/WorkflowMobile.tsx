@@ -31,21 +31,28 @@ const STEPS = [
 ];
 
 // The route the marker travels, as fractions of the measured content box. A
-// vertical GPS-style zigzag (straight `L` segments, sharp ups and downs) that
-// threads down behind the stacked layout. x is kept within [0.2, 0.64] so the
-// marker and the coordinate label beside it never run off either screen edge.
+// GPS-style track (straight `L` segments) that threads down behind the stacked
+// layout. Rather than a metronomic left↔right zigzag it's deliberately uneven —
+// like the desktop route — with irregular x offsets, varying vertical gaps and
+// the odd soft jag, so it reads as a real path rather than a repeating pattern.
+// x is kept within [0.2, 0.58] so the marker and the coordinate label beside it
+// never run off either screen edge; the final point lands ~0.93 so the track
+// ends *behind* the last step's video rather than in the bottom padding.
 const ROUTE_POINTS: [number, number][] = [
-  [0.62, 0.01],
+  [0.58, 0.01],
   [0.34, 0.05],
-  [0.6, 0.1],
-  [0.22, 0.18],
-  [0.64, 0.28],
-  [0.24, 0.4],
-  [0.62, 0.51],
-  [0.22, 0.62],
-  [0.64, 0.72],
-  [0.3, 0.84],
-  [0.48, 0.99],
+  [0.5, 0.11],
+  [0.24, 0.17],
+  [0.3, 0.25],
+  [0.56, 0.32],
+  [0.4, 0.4],
+  [0.22, 0.47],
+  [0.36, 0.55],
+  [0.56, 0.62],
+  [0.46, 0.7],
+  [0.24, 0.77],
+  [0.44, 0.85],
+  [0.5, 0.93],
 ];
 const buildRoute = (w: number, h: number) =>
   "M" +
@@ -139,8 +146,10 @@ export default function WorkflowMobile() {
     mm.add("(max-width: 767px)", () => {
       // Blur-in reveal for every marked element — stable triggers (no parallax
       // on mobile), so each element is its own trigger.
+      // Unblur earlier than the default so the copy sharpens shortly after it
+      // enters, rather than needing a long drag to become legible.
       root.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => {
-        blurReveal(el, el);
+        blurReveal(el, el, { start: "top 92%", end: "top 66%" });
       });
 
       // The path animation is rebuilt whenever the box is remeasured (fonts
@@ -185,15 +194,23 @@ export default function WorkflowMobile() {
         };
         placeLabel(0);
 
-        // Fade the route, marker and label up as the section arrives.
+        // Fade the route, marker and label up as the section arrives. The
+        // marker and coordinate label settle at a low opacity so, together with
+        // the faint strokes, the whole track reads as part of the background
+        // instead of competing with the copy stacked over it.
         gsap.set([route, trail, marker, label], { opacity: 0 });
         const reveal = ScrollTrigger.create({
           trigger: root,
           start: "top 80%",
           once: true,
           onEnter: () => {
-            gsap.to([route, trail, marker, label], {
+            gsap.to([route, trail], {
               opacity: 1,
+              duration: 1,
+              ease: "power2.out",
+            });
+            gsap.to([marker, label], {
+              opacity: 0.5,
               duration: 1,
               ease: "power2.out",
             });
@@ -285,8 +302,8 @@ export default function WorkflowMobile() {
           className="opacity-0"
           d=""
           stroke="var(--color-primary)"
-          strokeOpacity="0.28"
-          strokeWidth="3"
+          strokeOpacity="0.14"
+          strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
@@ -295,7 +312,8 @@ export default function WorkflowMobile() {
           ref={trailRef}
           d=""
           stroke="var(--color-primary)"
-          strokeWidth="4"
+          strokeOpacity="0.45"
+          strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
@@ -335,25 +353,25 @@ export default function WorkflowMobile() {
         <g ref={labelRef} className="opacity-0 [direction:ltr]">
           <text
             ref={latRef}
-            x="28"
+            x="26"
             y="-4"
             textAnchor="start"
-            fontSize={16}
-            fontWeight={700}
-            letterSpacing={1}
-            fill="#b1b4b1"
+            fontSize={13}
+            fontWeight={600}
+            letterSpacing={0.5}
+            fill="#8a8f8a"
           >
             54.3056°N
           </text>
           <text
             ref={lngRef}
-            x="28"
-            y="15"
+            x="26"
+            y="13"
             textAnchor="start"
-            fontSize={16}
-            fontWeight={700}
-            letterSpacing={1}
-            fill="#b1b4b1"
+            fontSize={13}
+            fontWeight={600}
+            letterSpacing={0.5}
+            fill="#8a8f8a"
           >
             7.7206°W
           </text>
@@ -361,7 +379,7 @@ export default function WorkflowMobile() {
       </svg>
 
       {/* Stacked content */}
-      <div className="relative z-10 flex flex-col gap-12">
+      <div className="relative z-10 flex flex-col gap-28">
         {/* Title above the two intro images */}
         <h2
           data-reveal
@@ -370,30 +388,17 @@ export default function WorkflowMobile() {
           كيف تسير عملية اكتشاف الحفر ؟
         </h2>
 
-        {/* The two intro images, kept in their side-by-side layout (dir=ltr so
-            the wide image stays on the left, the square one on the right). */}
-        <div dir="ltr" className="flex items-start justify-between gap-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            data-reveal
-            src="/assets/Workflow/Workflow%200%20-%202.webp"
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className="mt-8 aspect-video w-[54%] rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
-          />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            data-reveal
-            src="/assets/Workflow/Workflow%200%20-%201.webp"
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            decoding="async"
-            className="aspect-square w-[40%] rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
-          />
-        </div>
+        {/* A single intro image — full width, matching the media cards below. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          data-reveal
+          src="/assets/Workflow/Workflow%200%20-%202.webp"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          className="aspect-video w-full rounded-2xl object-cover shadow-[0_16px_40px_rgba(14,19,18,0.45)]"
+        />
 
         {STEPS.map((step) => (
           <MobileStep key={step.heading} {...step} />

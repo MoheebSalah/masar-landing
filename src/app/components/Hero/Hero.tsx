@@ -96,7 +96,7 @@ export default function Hero() {
         className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center md:items-start md:justify-end md:px-16 md:pb-16 md:text-right lg:px-32 lg:pb-24"
       >
         <div className="max-w-5xl">
-          <h1 ref={headingRef} className="font-heading font-semibold text-[2.5rem] leading-[1.15] text-text-dark sm:text-[3.5rem] md:text-[5.75rem] lg:text-[7.25rem]">
+          <h1 ref={headingRef} className="font-heading font-semibold text-[3.25rem] leading-[1.12] text-text-dark sm:text-[3.75rem] md:text-[5.75rem] lg:text-[7.25rem]">
             <span className="block"> سجّل طريقك، ودع <span className="text-primary">مسار</span> </span>
             <span className="block">يرصد كل حفرة فيه</span>
           </h1>

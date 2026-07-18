@@ -141,6 +141,30 @@ export default function Problem() {
     // Mobile: no scroll cycling. Just a light entrance reveal — the stacked
     // titles and image fade up together once the section slides into view.
     mm.add("(max-width: 767px)", () => {
+      // Lock the problems column to the height of its tallest state (all three
+      // titles + the longest sentence expanded), so switching problems never
+      // resizes the column — and the image below it never shifts. Any extra room
+      // in shorter states falls to the bottom (the column is justify-start on
+      // mobile), so the titles and image keep their positions.
+      const col = textColRef.current;
+      const measure = () => {
+        if (!col) return;
+        col.style.minHeight = "";
+        const gap = parseFloat(getComputedStyle(col).rowGap) || 0;
+        const titles = Array.from(col.querySelectorAll("button"));
+        const sentences = Array.from(col.querySelectorAll("p"));
+        if (!titles.length || !sentences.length) return;
+        const titlesH = titles.reduce((sum, b) => sum + b.offsetHeight, 0);
+        const gapsH = gap * (titles.length - 1);
+        // scrollHeight reports each sentence's full height even while collapsed.
+        const maxSentence = Math.max(...sentences.map((p) => p.scrollHeight));
+        const SENTENCE_MT = 12; // the mt-3 above the expanded sentence
+        col.style.minHeight = `${titlesH + gapsH + SENTENCE_MT + maxSentence}px`;
+      };
+      const raf = requestAnimationFrame(measure);
+      document.fonts?.ready.then(measure).catch(() => {});
+      window.addEventListener("resize", measure);
+
       const words = textColRef.current
         ? Array.from(textColRef.current.children)
         : [];
@@ -158,6 +182,12 @@ export default function Problem() {
         ease: "power3.out",
         stagger: 0.08,
       });
+
+      return () => {
+        cancelAnimationFrame(raf);
+        window.removeEventListener("resize", measure);
+        if (col) col.style.minHeight = "";
+      };
     });
 
     return () => {
@@ -175,7 +205,7 @@ export default function Problem() {
       ref={sectionRef}
       className="relative z-10 h-[300vh] rounded-t-brand bg-background max-md:h-dvh"
     >
-      <div className="sticky top-0 flex h-screen flex-col justify-center gap-10 max-md:h-dvh max-md:gap-6">
+      <div className="sticky top-0 flex h-screen flex-col justify-center gap-10 max-md:h-dvh max-md:gap-6 max-md:py-20">
         {/* Section title — tells visitors this section is about the hurdles of
             keeping roads in repair (what Masar is built to fix). Padding matches
             the grid below so it lines up with the problem words. */}
@@ -183,7 +213,7 @@ export default function Problem() {
           ref={titleRef}
           className="px-8 text-right md:px-16 lg:px-32"
         >
-          <h2 className="font-heading text-h3 text-text lg:text-h2 max-md:text-t1">
+          <h2 className="font-heading text-h3 text-text lg:text-h2 max-md:text-h3">
             تحديات إدارة أضرار الطرق
           </h2>
         </div>
@@ -194,7 +224,7 @@ export default function Problem() {
         <div className="grid w-full grid-cols-[1fr_1.3fr] items-stretch gap-12 px-8 md:px-16 lg:px-32 max-md:flex max-md:flex-col max-md:gap-6">
           {/* Right (start side in RTL) — the problems we solve.
               Spread to match the image's height, top and bottom. */}
-          <div ref={textColRef} className="flex flex-col justify-between text-right max-md:gap-3">
+          <div ref={textColRef} className="flex flex-col justify-between text-right max-md:justify-start max-md:gap-5">
             {PROBLEMS.map((problem, index) => (
               <ProblemPoint
                 key={problem.word}
@@ -209,7 +239,7 @@ export default function Problem() {
           {/* Left — image of the selected problem */}
           <div
             ref={imageColRef}
-            className="relative aspect-3/2 w-full self-center overflow-hidden rounded-brand max-md:max-h-[36dvh]"
+            className="relative aspect-3/2 w-full self-center overflow-visible rounded-brand max-md:max-h-[42dvh]"
           >
             {PROBLEMS.map((problem, index) => (
               // eslint-disable-next-line @next/next/no-img-element
@@ -220,7 +250,7 @@ export default function Problem() {
                 aria-hidden="true"
                 loading="lazy"
                 decoding="async"
-                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${index === active ? "opacity-100" : "opacity-0"
+                className={`absolute overflow-visible  inset-0 h-full w-full object-cover transition-opacity duration-500 max-md:object-contain ${index === active ? "opacity-100" : "opacity-0"
                   }`}
               />
             ))}
