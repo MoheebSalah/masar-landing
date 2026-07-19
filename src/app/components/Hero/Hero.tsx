@@ -67,17 +67,22 @@ export default function Hero() {
       ref={sectionRef}
       className="relative h-screen w-full overflow-hidden"
     >
-      {/* Background video */}
+      {/* Background video. Phones autoplay the lightweight re-encode (~1/5 the
+          bytes) so the above-the-fold hero isn't gated on a full-resolution
+          download; wider screens keep the original. The browser picks the first
+          matching source, so the desktop load is unchanged. */}
       <video
         className="absolute inset-0 h-full w-full object-cover"
-        src="/assets/Workflow/Workflow 1.mp4"
         autoPlay
         loop
         muted
         playsInline
         preload="auto"
         aria-hidden="true"
-      />
+      >
+        <source src="/assets/Workflow/Workflow 1.mobile.mp4" media="(max-width: 767px)" type="video/mp4" />
+        <source src="/assets/Workflow/Workflow 1.mp4" type="video/mp4" />
+      </video>
 
       {/* Readability overlay: darker toward the bottom-right where the text sits */}
       <div className="absolute inset-0 bg-linear-to-tl from-dark/80 via-dark/40 to-transparent" />

@@ -161,10 +161,16 @@ export default function MapMobile() {
         aria-hidden={!open}
         className="fixed inset-0 z-[100] hidden bg-background"
       >
+        {/* Deferred: the map (a ~1.4 MB document + its tiles) isn't fetched on
+            page load. The panel is display:none at rest, so loading="lazy" holds
+            the iframe until it's first shown (on open) rather than loading it
+            hidden behind the whole page — the map is a tap away, not an
+            upfront cost on every mobile visit. */}
         <iframe
           ref={iframeRef}
           src="/masar-map.html"
           title="خريطة مسار للحُفر في الخليل"
+          loading="lazy"
           className="h-full w-full border-0"
         />
 

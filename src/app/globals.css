@@ -137,6 +137,26 @@ body {
 }
 
 /*
+ * Mobile coverflow paint budget: the app screens use several backdrop-blur
+ * "glass" chips. Inside the phone carousel on mobile those phones are tiny and
+ * the off-centre ones already sit under the coverflow's own blur, so the inner
+ * backdrop-blur is imperceptible there — but it's one of the most expensive
+ * mobile paint ops and it re-rasterises on every theme toggle and on scroll-in.
+ * Drop it in the carousel on phones only; the fullscreen phone (outside
+ * .ps-coverflow) and every desktop view keep the real blur.
+ */
+@media (max-width: 767px) {
+  /* #app-preview raises specificity above Tailwind's backdrop-blur utility so
+     this wins the cascade regardless of layer order. Kept as the single
+     unprefixed property: pairing it with -webkit-backdrop-filter makes the
+     minifier collapse the two and drop this standard one (which is the property
+     modern browsers actually read). */
+  #app-preview .ps-coverflow * {
+    backdrop-filter: none !important;
+  }
+}
+
+/*
  * Theme toggle reveal: the default view-transition cross-fade is replaced by
  * a clip-path circle animated from the active phone's centre (driven from
  * PhoneShowcase with the Web Animations API on the ::view-transition-new
