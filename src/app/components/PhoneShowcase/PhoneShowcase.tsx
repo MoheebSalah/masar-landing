@@ -263,7 +263,10 @@ export default function PhoneShowcase() {
           ease: "power2.out",
           stagger: 0.05,
         });
-        // 2. The two phones tilt out from behind into place, together.
+        // 2. The two phones tilt out from behind into place, together. A longer,
+        // gentler glide than the screen fill — the neighbours drift out to their
+        // slots rather than snapping, which also spreads their (transform-only,
+        // GPU-composited) work across more frames so it never spikes.
         sides.forEach((s, k) =>
           tl.to(
             s.el,
@@ -271,10 +274,10 @@ export default function PhoneShowcase() {
               x: s.to.x,
               rotation: s.to.rotation,
               autoAlpha: s.to.autoAlpha,
-              duration: 0.55,
-              ease: "power3.out",
+              duration: 0.9,
+              ease: "power2.out",
             },
-            k === 0 ? "-=0.1" : "<",
+            k === 0 ? "-=0.15" : "<",
           ),
         );
 
@@ -630,7 +633,7 @@ export default function PhoneShowcase() {
         <div
           ref={carouselRef}
           dir="ltr"
-          className="relative isolate h-172 w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
+          className="ps-coverflow relative isolate h-172 w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}

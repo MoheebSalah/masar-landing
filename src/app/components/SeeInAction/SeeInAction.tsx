@@ -17,6 +17,27 @@ const VIDEOS = [
   "/assets/Carousel/Carousel 5.mp4",
 ];
 
+// Lightweight ~720px re-encodes served to phones instead of the full-resolution
+// clips above — a fraction of the bytes for a screen that never shows them
+// larger than a phone frame.
+const MOBILE_VIDEOS = [
+  "/assets/Carousel/Carousel 1.mobile.mp4",
+  "/assets/Carousel/Carousel 2.mobile.mp4",
+  "/assets/Carousel/Carousel 3.mobile.mp4",
+  "/assets/Carousel/Carousel 4.mobile.mp4",
+  "/assets/Carousel/Carousel 5.mobile.mp4",
+];
+
+// First-frame stills. On phones the clips don't autoplay, so each frame shows
+// its poster (a few KB) and no video is fetched until the visitor taps play.
+const POSTERS = [
+  "/assets/Carousel/Carousel 1.poster.webp",
+  "/assets/Carousel/Carousel 2.poster.webp",
+  "/assets/Carousel/Carousel 3.poster.webp",
+  "/assets/Carousel/Carousel 4.poster.webp",
+  "/assets/Carousel/Carousel 5.poster.webp",
+];
+
 // How the outgoing/incoming clips look at one full step from centre: pushed a
 // full frame width aside (so at rest they sit off-stage and are clipped),
 // shrunk, faded and blurred. Everything eases back to zero at the centre.
@@ -255,17 +276,18 @@ export default function SeeInAction() {
     };
   }, []);
 
-  // On phones the clips don't autoplay, so nudge each one to load its first
-  // frame — the paused clip shows a still behind the play button instead of a
-  // blank box. (Desktop keeps preload="none" and lazy-loads on scroll-in.)
+  // On phones the clips don't autoplay, so give each one a poster still instead
+  // of downloading video: the paused clip shows its lightweight poster behind
+  // the play button, and no clip is fetched until the visitor actually taps
+  // play. The stage is revealed straight away since the posters are ready to
+  // show. (Desktop keeps preload="none" and lazy-loads its own clip on
+  // scroll-in — the posters are set here only, so its markup is untouched.)
   useEffect(() => {
     if (!window.matchMedia("(max-width: 767px)").matches) return;
-    videoRefs.current.forEach((v) => {
-      if (v) {
-        v.preload = "metadata";
-        v.load();
-      }
+    videoRefs.current.forEach((v, i) => {
+      if (v) v.poster = POSTERS[i];
     });
+    revealStage();
   }, []);
 
   const togglePlay = () => {
@@ -398,7 +420,6 @@ export default function SeeInAction() {
                     // autoplay when muted, and React's `muted` attribute is unreliable.
                     if (el) el.muted = true;
                   }}
-                  src={src}
                   // object-cover locks every clip into the same frame no matter
                   // its own resolution or aspect ratio. The rounding lives on the
                   // video itself now that the stage no longer clips.
@@ -410,7 +431,13 @@ export default function SeeInAction() {
                   onLoadedData={revealStage}
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
-                />
+                >
+                  {/* Phones load the small re-encode; wider screens keep the
+                      full-resolution clip. The browser picks the first matching
+                      source, so the desktop download is unchanged. */}
+                  <source src={MOBILE_VIDEOS[i]} media="(max-width: 767px)" type="video/mp4" />
+                  <source src={src} type="video/mp4" />
+                </video>
               </div>
             ))}
 
@@ -500,7 +527,7 @@ export default function SeeInAction() {
       {/* Mobile fullscreen overlay for the current clip */}
       {fsOpen && (
         <FullscreenPlayer
-          src={VIDEOS[activeDot]}
+          src={MOBILE_VIDEOS[activeDot]}
           onClose={() => setFsOpen(false)}
           onPrev={() => step(-1)}
           onNext={() => step(1)}
