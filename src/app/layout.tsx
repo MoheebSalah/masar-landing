@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Almarai, Poppins } from "next/font/google";
 import localFont from "next/font/local";
 import "lenis/dist/lenis.css";
@@ -27,6 +27,17 @@ const rubbama = localFont({
 export const metadata: Metadata = {
   title: "مسار",
   description: "منصّة ذكية ترصد أضرار الطرق تلقائيًا وتحوّلها إلى خطة إصلاح مُنظّمة وقابلة للمتابعة.",
+  // Lets iOS launch the installed page full-screen (standalone) like the manifest does for Android.
+  appleWebApp: {
+    capable: true,
+    title: "مسار",
+    statusBarStyle: "default",
+  },
+};
+
+// theme-color tints the mobile status bar / task-switcher and the PWA splash.
+export const viewport: Viewport = {
+  themeColor: "#34A8D8",
 };
 
 export default function RootLayout({
