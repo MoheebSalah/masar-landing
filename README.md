@@ -11,6 +11,8 @@ This repository holds the **marketing landing page** for Masar — a scroll‑dr
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white)
 ![GSAP](https://img.shields.io/badge/GSAP-ScrollTrigger-88CE02?logo=greensock&logoColor=black)
+![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white)
+![Responsive](https://img.shields.io/badge/Responsive-mobile_%26_desktop-34A8D8)
 
 **[🌐 View the live site → masar-home.vercel.app](https://masar-home.vercel.app/)**
 
@@ -22,7 +24,7 @@ This repository holds the **marketing landing page** for Masar — a scroll‑dr
 
 Masar is a concept product for road‑maintenance authorities: a single camera on a moving vehicle detects potholes and cracks in real time, scores each one by severity, pins it to a map, and rolls everything into a repair plan that can be followed from detection to sign‑off.
 
-This landing page tells that story through the scroll. Every section is a self‑contained, choreographed scene — pinned video, converging typography, a GPS marker travelling a hand‑authored SVG route, a morphing device frame wrapped around a live interactive map, odometer‑style impact counters, and a phone showcase that flips its entire colour theme through a circular View Transition. The whole site is Arabic‑first and right‑to‑left by design.
+This landing page tells that story through the scroll. Every section is a self‑contained, choreographed scene — pinned video, converging typography, a GPS marker travelling a hand‑authored SVG route, a morphing device frame wrapped around a live interactive map, odometer‑style impact counters, and a phone showcase that flips its entire colour theme through a circular View Transition. The whole site is Arabic‑first and right‑to‑left by design, **fully responsive** across mobile and desktop, and **installable as a PWA**.
 
 ## Tech Stack
 
@@ -33,6 +35,8 @@ This landing page tells that story through the scroll. Every section is a self�
 - **Smooth scrolling** — [Lenis](https://github.com/darkroomengineering/lenis)
 - **Maps** — [MapLibre GL](https://maplibre.org/) (self‑hosted, no CDN)
 - **Fonts** — Almarai & Poppins via `next/font`, plus a local Rubbama display face for headings
+- **Responsive** — mobile‑first layouts down to small phones, with GSAP animations gated per breakpoint via `gsap.matchMedia`
+- **PWA** — installable via a Next.js Metadata‑API [Web App Manifest](src/app/manifest.ts) with maskable/Apple icons, `standalone` display, and a themed splash
 
 ## Getting Started
 
@@ -56,7 +60,9 @@ npm run lint    # run ESLint
 
 ```
 src/app/
-├── layout.tsx              # RTL <html>, fonts, smooth-scroll wrapper, metadata
+├── layout.tsx              # RTL <html>, fonts, smooth-scroll wrapper, metadata + theme-color
+├── manifest.ts             # PWA Web App Manifest (name, icons, standalone, theme)
+├── icon.png / apple-icon.png  # favicon + Apple touch icon
 ├── page.tsx                # composes the sections in scroll order
 ├── globals.css             # Tailwind @theme design tokens + keyframe animations
 └── components/
@@ -74,6 +80,7 @@ src/app/
 
 public/
 ├── masar-map.html          # self-contained MapLibre map (embedded via iframe)
+├── icons/                  # PWA install icons (192, 512, maskable)
 ├── assets/                 # section videos, images, and app-screen SVGs
 └── fonts/                  # local Rubbama display face
 ```
@@ -99,7 +106,8 @@ The visual language is defined once as Tailwind `@theme` tokens in [`globals.css
 ## Notes
 
 - The interface language is **Arabic only**, laid out **right‑to‑left**.
-- The experience is currently tuned for **desktop**.
+- The experience is **fully responsive** — the desktop scroll choreography is re‑tuned (and, where needed, simplified) for mobile and tablet.
+- The site is an **installable PWA**: add it to your home screen for a standalone, full‑screen launch with a branded splash.
 - Motion‑heavy sections respect `prefers-reduced-motion` where animations could be disruptive.
 
 ---
