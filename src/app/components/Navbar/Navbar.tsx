@@ -4,14 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Logo from "../Logo/Logo";
 import NavLink from "./NavLink";
+import BurgerButton from "./BurgerButton";
+import MobileMenu from "./MobileMenu";
 import { onLoaderDone } from "../Loader/loaderSignal";
+import { getLenis } from "../SmoothScroll/lenisInstance";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const lastY = useRef(0);
   const logoRef = useRef<HTMLAnchorElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
+  const mobileBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => {
@@ -44,10 +49,29 @@ export default function Navbar() {
     };
   }, []);
 
+  // While the menu is open, freeze the page (Lenis drives the smooth scroll)
+  // and let Escape dismiss it.
+  useEffect(() => {
+    const lenis = getLenis();
+    if (menuOpen) lenis?.stop();
+    else lenis?.start();
+
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   // Reveal the logo and links once the loading screen clears — they drop in
   // from just above their resting spot, the links trailing the logo slightly.
   useEffect(() => {
-    const targets = [logoRef.current, linksRef.current].filter(Boolean);
+    const targets = [
+      logoRef.current,
+      linksRef.current,
+      mobileBarRef.current,
+    ].filter(Boolean);
     if (targets.length === 0) return;
 
     gsap.set(targets, { autoAlpha: 0, y: -16 });
@@ -63,48 +87,90 @@ export default function Navbar() {
     return unsubscribe;
   }, []);
 
+  // The mobile bar keeps its logo + burger white the whole way down the page — a
+  // black gradient behind them (below) guarantees contrast over any section. The
+  // only exception is when the light dropdown card is open, where they go dark.
+  const mobileDark = menuOpen;
+
   return (
-    <header
-      dir="ltr"
-      className={`fixed inset-x-0 top-0 z-50 flex justify-center transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-        hidden ? "-translate-y-24" : "translate-y-0"
-      }`}
-    >
-      <nav
-        className={`nav-shell group flex items-center justify-between ${
-          scrolled
-            ? "mt-4 h-10 w-100 rounded-2xl bg-white px-5 hover:bg-primary"
-            : "mt-0 h-24 w-full bg-transparent px-8 md:h-28 md:px-16 lg:px-32"
+    <>
+      <header
+        dir="ltr"
+        className={`fixed inset-x-0 top-0 z-50 flex justify-center transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          hidden && !menuOpen ? "-translate-y-24" : "translate-y-0"
         }`}
       >
-        {/* Logo — left corner, with the wordmark below it */}
-        <a
-          ref={logoRef}
-          href="#"
-          aria-label="مسار"
-          className={`relative flex items-center transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            scrolled ? "text-on-primary" : "text-white"
+        {/* Desktop nav — shape morphs to a pill on scroll */}
+        <nav
+          className={`nav-shell group hidden items-center justify-between md:flex ${
+            scrolled
+              ? "mt-4 h-10 w-100 rounded-2xl bg-white px-5 hover:bg-primary"
+              : "mt-0 h-24 w-full bg-transparent px-8 md:h-28 md:px-16 lg:px-32"
           }`}
         >
-          <Logo
-            className={`w-auto transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              scrolled ? "h-9" : "h-16 md:h-18"
+          {/* Logo — left corner, with the wordmark below it */}
+          <a
+            ref={logoRef}
+            href="#"
+            aria-label="مسار"
+            className={`relative flex items-center transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              scrolled ? "text-on-primary" : "text-white"
+            }`}
+          >
+            <Logo
+              className={`w-auto transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                scrolled ? "h-9" : "h-16 md:h-18"
+              }`}
+            />
+          </a>
+
+          {/* Anchors — right corner */}
+          <div
+            ref={linksRef}
+            dir="rtl"
+            className={`flex items-center gap-8 text-t3 transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              scrolled ? "text-on-primary" : "text-text-dark"
+            }`}
+          >
+            <NavLink href="#about">من نحن</NavLink>
+            <NavLink href="#contact">تواصل معنا</NavLink>
+          </div>
+        </nav>
+
+        {/* Mobile bar — burger (left) + logo (right), transparent with a soft
+            black gradient from the top so the white marks stay legible over any
+            section behind them. The gradient clears when the light card is open. */}
+        <div
+          ref={mobileBarRef}
+          className="relative flex h-20 w-full items-center justify-between px-6 md:hidden"
+        >
+          <div
+            className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-black/35 via-black/10 to-transparent transition-opacity duration-300 ${
+              menuOpen ? "opacity-0" : "opacity-100"
             }`}
           />
-        </a>
 
-        {/* Anchors — right corner */}
-        <div
-          ref={linksRef}
-          dir="rtl"
-          className={`flex items-center gap-8 text-t3 transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            scrolled ? "text-on-primary" : "text-text-dark"
-          }`}
-        >
-          <NavLink href="#about">من نحن</NavLink>
-          <NavLink href="#contact">تواصل معنا</NavLink>
+          <BurgerButton
+            open={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            className={`relative z-10 transition-colors duration-300 ${
+              mobileDark ? "text-text" : "text-white"
+            }`}
+          />
+
+          <a
+            href="#"
+            aria-label="مسار"
+            className={`relative z-10 flex items-center transition-colors duration-300 ${
+              mobileDark ? "text-text" : "text-white"
+            }`}
+          >
+            <Logo className="h-11 w-auto" />
+          </a>
         </div>
-      </nav>
-    </header>
+      </header>
+
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+    </>
   );
 }

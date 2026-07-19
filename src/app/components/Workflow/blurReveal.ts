@@ -11,7 +11,11 @@ import gsap from "gsap";
  * tween only touches `opacity`/`filter`, so it composes cleanly with a separate
  * parallax tween animating `y` on the same target.
  */
-export function blurReveal(target: gsap.TweenTarget, trigger: Element) {
+export function blurReveal(
+  target: gsap.TweenTarget,
+  trigger: Element,
+  { start = "top 80%", end = "top 45%" }: { start?: string; end?: string } = {},
+) {
   return gsap.fromTo(
     target,
     { opacity: 0, filter: "blur(16px)" },
@@ -21,8 +25,8 @@ export function blurReveal(target: gsap.TweenTarget, trigger: Element) {
       ease: "none",
       scrollTrigger: {
         trigger,
-        start: "top 80%", // begins as the element rises into view
-        end: "top 45%", // fully clear after a short scroll
+        start, // begins as the element rises into view
+        end, // fully clear after a short scroll
         scrub: true,
       },
     },

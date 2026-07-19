@@ -12,6 +12,13 @@ export default function SmoothScroll({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   useEffect(() => {
+    // On phones the browser's URL bar hides/shows as you scroll, firing a stream
+    // of resize events whose only change is viewport HEIGHT. Left alone, every
+    // one makes ScrollTrigger recompute and re-lay its pins mid-scroll — which is
+    // exactly the "something caught the screen" snag on pinned sections (e.g.
+    // Solution). Ignoring height-only mobile resizes keeps pinned scenes smooth.
+    ScrollTrigger.config({ ignoreMobileResize: true });
+
     // Always open at the top on load/refresh. `scrollRestoration` is also set
     // to "manual" by an inline script in the layout <head> (before the browser
     // restores anything), but we reassert it here and force the native scroll

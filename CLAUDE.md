@@ -38,7 +38,6 @@
 - No Border.
 - light shadow only.
 - 32px fixed border radius
-- Focus on Desktop only for now, not responsive
 
 
 # Colours :

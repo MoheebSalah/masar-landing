@@ -87,7 +87,7 @@ export default function Footer() {
          reveal the primary beneath. */
       className="relative h-[calc(100vh+2rem)] [clip-path:inset(0)]"
     >
-      <footer className="fixed inset-x-0 bottom-0 h-screen overflow-hidden bg-primary px-32 pt-16 text-white">
+      <footer className="fixed inset-x-0 bottom-0 h-screen overflow-hidden bg-primary px-6 pt-14 text-white md:px-32 md:pt-16">
         {/* Giant brand mark rising from behind the bottom edge — nearly as
             wide as the screen. Anchored by its TOP at a viewport-relative
             height so it starts below the content on any screen, while its
@@ -95,10 +95,10 @@ export default function Footer() {
             arrow is animated on its own for the staircase reveal. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-[41vh] flex justify-center"
+          className="pointer-events-none absolute inset-x-0 top-[70vh] flex justify-center md:top-[41vh]"
         >
           <svg
-            className="footer-mark h-auto w-[94vw]"
+            className="footer-mark h-auto w-[160vw] shrink-0 md:w-[94vw]"
             viewBox="4.5 16.5 47 23"
             fill="currentColor"
           >
@@ -120,7 +120,7 @@ export default function Footer() {
         {/* Text content sits above the mark */}
         <div className="relative">
           {/* Headline — top right (RTL start) */}
-          <h2 ref={aboveRef} className="max-w-4xl font-heading text-h1">
+          <h2 ref={aboveRef} className="max-w-4xl font-heading text-h3 md:text-h1">
             معًا نرسم مسارًا أكثر أمانًا لطرقكم
           </h2>
 
@@ -129,8 +129,8 @@ export default function Footer() {
 
           <div ref={belowRef}>
             {/* Nav / Contact / Socials — wordmark at the far left (RTL end) */}
-            <div className="mt-10 flex items-start justify-between">
-              <div className="flex gap-32">
+            <div className="mt-8 flex flex-col gap-10 md:mt-10 md:flex-row md:items-start md:justify-between">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:flex md:gap-32">
                 <nav aria-label="روابط الصفحة">
                   <h3 className="text-t4 font-bold text-white/70">تصفّح</h3>
                   <ul className="mt-5 space-y-3 text-t4">
@@ -225,12 +225,14 @@ export default function Footer() {
               {/* Wordmark + legal — far left (RTL end), a column kept clear
                   of the rising arrows */}
               <div>
-                <span className="block font-heading text-[120px] leading-none">
+                <span className="hidden font-heading text-[120px] leading-none md:block">
                   مسار
                 </span>
                 <div className="mt-6 space-y-2.5 text-t5 text-white/70">
-                  <p>© 2026 مسار. جميع الحقوق محفوظة.</p>
-                  <div className="flex items-center gap-5">
+                  {/* Copyright + legal links: desktop only — phones keep just
+                      the "back to top" control below. */}
+                  <p className="max-md:hidden">© 2026 مسار. جميع الحقوق محفوظة.</p>
+                  <div className="flex items-center gap-5 max-md:hidden">
                     <a href="#" className="transition-opacity duration-300 hover:opacity-70">
                       سياسة الخصوصية
                     </a>
