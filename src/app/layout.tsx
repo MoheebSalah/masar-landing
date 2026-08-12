@@ -9,13 +9,17 @@ const almarai = Almarai({
   variable: "--font-almarai",
   subsets: ["arabic"],
   weight: ["300", "400", "700", "800"],
+  display: "swap",
 });
 
-// Latin display face used only for the big impact numbers.
+// Latin display face used only for the big impact numbers, which render at a
+// single weight — loading just that one keeps four unused font files off the
+// first paint.
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400"],
+  display: "swap",
 });
 
 const rubbama = localFont({

@@ -30,6 +30,16 @@ export default function Solution() {
     const section = sectionRef.current;
     if (!section) return;
 
+    // The light → dark swap is a single flip, not a scrubbed colour: crossing
+    // the trigger point writes data-dark on the section and CSS takes over from
+    // there (a composited opacity fade on the backdrop layer + a colour
+    // transition on the sentence). Nothing repaints per scroll frame, and the
+    // fade plays at its own steady pace however fast the visitor scrolls.
+    const flipAt = (progress: number, point: number) => {
+      const dark = progress >= point ? "true" : "false";
+      if (section.dataset.dark !== dark) section.dataset.dark = dark;
+    };
+
     const mm = gsap.matchMedia();
 
     // Desktop: the two halves converge into a single line over three
@@ -69,6 +79,12 @@ export default function Solution() {
         },
       });
 
+      // The point in the pinned scroll where the section swaps to dark: just as
+      // the two halves are about to meet. Because the swap still happens inside
+      // Solution, it and the dark Workflow below read as one continuous
+      // background — no hard seam between the sections.
+      const DARK_AT = 0.68;
+
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
@@ -76,6 +92,9 @@ export default function Solution() {
           end: "+=300%", // three viewport-heights of scroll drive the scene
           pin: true,
           scrub: 1, // smooth, scroll-tied progress
+          onUpdate: (self) => flipAt(self.progress, DARK_AT),
+          // Keeps the state right when the page is reloaded or resized mid-scene.
+          onRefresh: (self) => flipAt(self.progress, DARK_AT),
         },
       });
 
@@ -83,33 +102,14 @@ export default function Solution() {
       tl.to(rightRef.current, { x: 0, ease: "none", duration: 4 }, 0);
       tl.to(leftRef.current, { x: 0, ease: "none", duration: 4 }, 0);
 
-      // The gap between the halves shrinks linearly from 2*offset to 0 over the
-      // x tweens (duration 4). Just before they meet — when the gap reaches
-      // 250px — flip the text from primary to white.
-      const gapThreshold = 250;
-      const timeAtThreshold = (1 - gapThreshold / (2 * offset)) * 4;
-      gsap.set(textRef.current, { color: "#34A8D8" });
-      tl.to(
-        textRef.current,
-        { color: "#F7F8F7", ease: "none", duration: 0.6 },
-        Math.max(0, timeAtThreshold - 0.6)
-      );
-
       // Crossfade through the frames, one transition per scroll segment.
       frames.slice(1).forEach((frame, i) => {
         tl.to(frame, { opacity: 1, ease: "none", duration: 1 }, i);
       });
 
-      // Over the last stretch of the pinned scroll, blend this section's own
-      // background from light (#EEEAE0) to the Workflow section's dark
-      // (#0E1312). Because the darkening happens while still inside Solution,
-      // the two sections read as one continuous background — the dark
-      // Workflow simply picks up where Solution left off, with no hard seam.
-      tl.to(
-        section,
-        { backgroundColor: "#0E1312", ease: "none", duration: 1.3 },
-        2.7
-      );
+      return () => {
+        section.dataset.dark = "false";
+      };
     });
 
     // Mobile: the phone is too narrow for the halves to sit side by side, so
@@ -131,7 +131,6 @@ export default function Solution() {
       gsap.set([rightSlideRef.current, leftSlideRef.current], { autoAlpha: 1, x: 0 });
       gsap.set(rightRef.current, { x: offset, autoAlpha: 0 });
       gsap.set(leftRef.current, { x: -offset, autoAlpha: 0 });
-      gsap.set(textRef.current, { color: "#34A8D8" });
 
       // The first frame fades up as the section arrives.
       ScrollTrigger.create({
@@ -142,12 +141,18 @@ export default function Solution() {
           gsap.to(frames[0], { autoAlpha: 1, duration: 0.9, ease: "power2.out" }),
       });
 
+      // Halfway through the pinned scroll — the lines are still travelling, so
+      // the background has already turned by the time they settle.
+      const DARK_AT = 0.5;
+
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
           start: "top top",
           end: "+=125%", // a longer pinned scroll so the scene plays out slower
           pin: true,
+          onUpdate: (self) => flipAt(self.progress, DARK_AT),
+          onRefresh: (self) => flipAt(self.progress, DARK_AT),
           // Pin a hair early so the switch to fixed lands before the section
           // fully meets the top — removes the "catch" as the pin engages.
           anticipatePin: 1,
@@ -163,14 +168,6 @@ export default function Solution() {
       tl.to(rightRef.current, { x: 0, autoAlpha: 1, ease: "none", duration: converge }, 0);
       tl.to(leftRef.current, { x: 0, autoAlpha: 1, ease: "none", duration: converge }, 0);
 
-      // Darken light → Workflow dark WHILE the lines are still travelling, so the
-      // background has already turned by the time they settle — not as a separate
-      // beat after they stop.
-      tl.to(section, { backgroundColor: "#0E1312", ease: "none", duration: 1.6 }, 0.6);
-
-      // Flip primary → white during the final stretch of their approach.
-      tl.to(textRef.current, { color: "#F7F8F7", ease: "none", duration: 0.6 }, converge - 0.9);
-
       // Crossfade through the five frames. The cues are deliberately uneven: the
       // third frame is held on screen the longest (its solo stretch dwarfs the
       // others), so that's the one the visitor lingers on; the last frame lands
@@ -180,6 +177,10 @@ export default function Solution() {
       frames.slice(1).forEach((frame, i) => {
         tl.to(frame, { opacity: 1, ease: "none", duration: frameFade }, frameCues[i]);
       });
+
+      return () => {
+        section.dataset.dark = "false";
+      };
     });
 
     return () => mm.revert();
@@ -189,8 +190,17 @@ export default function Solution() {
     <section
       ref={sectionRef}
       id="solution"
-      className="relative h-screen w-full overflow-hidden bg-background"
+      data-dark="false"
+      className="group relative h-screen w-full overflow-hidden bg-background"
     >
+      {/* The dark backdrop, faded in at the flip point. Fading a layer's
+          opacity is composited on the GPU, so the swap costs no repaint of the
+          section — unlike animating background-color would. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 bg-dark opacity-0 transition-opacity duration-700 ease-out group-data-[dark=true]:opacity-100"
+      />
+
       {/* Animated construction blueprint behind everything */}
       <Blueprint />
 
@@ -215,7 +225,7 @@ export default function Solution() {
       <div className="absolute inset-0 z-10 flex items-center justify-center">
         <div
           ref={textRef}
-          className="flex items-center gap-[0.35em] font-heading text-[3rem] leading-[1.05] text-primary max-md:flex-col max-md:gap-12 md:text-[5rem] lg:text-[6rem] max-md:text-[4.5rem]"
+          className="flex items-center gap-[0.35em] font-heading text-[3rem] leading-[1.05] text-primary transition-colors duration-700 ease-out group-data-[dark=true]:text-text-dark max-md:flex-col max-md:gap-64 md:text-[5rem] lg:text-[6rem] max-md:text-[4.5rem]"
         >
           <span ref={rightSlideRef} className="inline-block">
             <span ref={rightRef} className="inline-block whitespace-nowrap">

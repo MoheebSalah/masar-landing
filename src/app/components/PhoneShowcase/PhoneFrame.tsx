@@ -15,6 +15,8 @@ export default function PhoneFrame({ image }: Props) {
           alt=""
           aria-hidden="true"
           draggable={false}
+          loading="lazy"
+          decoding="async"
           className="pointer-events-none h-full w-full select-none object-cover object-top"
         />
       </div>

@@ -24,7 +24,7 @@ export default function BrandCard({ className = "" }: BrandCardProps) {
 
       {/* App peeking up from the bottom edge */}
       <div className="pointer-events-none absolute bottom-[-9%] left-1/2 w-[90%] -translate-x-1/2 drop-shadow-[0_18px_30px_rgba(14,19,18,0.20)]">
-        <PhoneFrame image="/assets/mockup/carousel%201.png" />
+        <PhoneFrame image="/assets/Mockup/carousel%201.webp" />
       </div>
     </div>
   );

@@ -326,10 +326,14 @@ export default function Map() {
             ref={screenRef}
             className="relative h-full w-full overflow-hidden bg-background"
           >
+            {/* The map document carries its own inlined MapLibre build (~1.3 MB),
+                so it stays lazy — it only fetches once this section nears the
+                viewport instead of competing with the sections above it. */}
             <iframe
               ref={iframeRef}
               src="/masar-map.html"
               title="خريطة مسار للحُفر في الخليل"
+              loading="lazy"
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-0"
             />
           </div>

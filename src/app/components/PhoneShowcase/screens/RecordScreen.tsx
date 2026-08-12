@@ -15,6 +15,8 @@ export default function RecordScreen({ dark }: Props) {
         src={dark ? "/assets/Screens/map-dark.svg" : "/assets/Screens/map-light.svg"}
         alt=""
         draggable={false}
+        loading="lazy"
+        decoding="async"
         className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(var(--sv-veil),0.4),rgba(var(--sv-veil),0.05)_30%,rgba(var(--sv-veil),0.75))]" />
