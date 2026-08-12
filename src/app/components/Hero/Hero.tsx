@@ -78,6 +78,11 @@ export default function Hero() {
         muted
         playsInline
         preload="auto"
+        // The clip's own first frame, as a 13 KB still. Until now the hero was
+        // blank until the whole video arrived (6 MB on desktop); the poster
+        // paints immediately and hands over to the video with no visible jump,
+        // since it *is* the frame the video starts on.
+        poster="/assets/Workflow/Workflow 1.poster.webp"
         aria-hidden="true"
       >
         <source src="/assets/Workflow/Workflow 1.mobile.mp4" media="(max-width: 767px)" type="video/mp4" />

@@ -37,8 +37,10 @@ export default function Bento() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/assets/bento/mac%20mockup.png"
+            src="/assets/Bento/mac%20mockup.webp"
             alt="لوحة تحكّم مسار على الحاسوب"
+            loading="lazy"
+            decoding="async"
             className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-center"
           />
         </MediaCard>
@@ -49,7 +51,7 @@ export default function Bento() {
           className="col-span-3 col-start-1 row-span-2 row-start-3"
         >
           <div className="pointer-events-none absolute left-1/2 top-8 w-[72%] -translate-x-1/2">
-            <PhoneFrame image="/assets/mockup/carousel%205.png" />
+            <PhoneFrame image="/assets/Mockup/carousel%205.webp" />
           </div>
         </MediaCard>
 
@@ -59,7 +61,7 @@ export default function Bento() {
           className="col-span-3 col-start-7 row-span-2 row-start-3"
         >
           <div className="pointer-events-none absolute left-1/2 top-8 w-[72%] -translate-x-1/2">
-            <PhoneFrame image="/assets/mockup/carousel%203.png" />
+            <PhoneFrame image="/assets/Mockup/carousel%203.webp" />
           </div>
         </MediaCard>
 
@@ -70,8 +72,10 @@ export default function Bento() {
         <MediaCard className="col-span-2 col-start-10 row-span-1 row-start-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/assets/pothole.png"
+            src="/assets/pothole.webp"
             alt="حفرة في الطريق"
+            loading="lazy"
+            decoding="async"
             className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain p-3"
           />
         </MediaCard>

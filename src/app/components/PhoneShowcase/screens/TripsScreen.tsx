@@ -45,7 +45,14 @@ function TripCard({
       {/* Map thumbnail */}
       <div className="relative h-[133px] w-[92px] shrink-0 overflow-hidden rounded-[15px] bg-(--sv-mapbg)">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={thumb} alt="" draggable={false} className="h-full w-full object-cover" />
+        <img
+          src={thumb}
+          alt=""
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
         <div className="absolute left-[7px] top-[7px] flex h-[26px] w-[26px] items-center justify-center rounded-[9px] bg-[#0E1312]/72 backdrop-blur-sm">
           <RouteIcon className="h-[15px] w-[15px] text-white" strokeWidth={2} />
         </div>
@@ -141,6 +148,8 @@ export default function TripsScreen({ dark }: Props) {
             src={dark ? "/assets/Screens/map-dark.svg" : "/assets/Screens/map-light.svg"}
             alt=""
             draggable={false}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
           />
           <div className="absolute inset-x-0 bottom-0 h-[136px] bg-linear-to-t from-(--sv-mapveil) to-transparent" />

@@ -143,9 +143,9 @@ export default function Problem() {
     mm.add("(max-width: 767px)", () => {
       // Lock the problems column to the height of its tallest state (all three
       // titles + the longest sentence expanded), so switching problems never
-      // resizes the column — and the image below it never shifts. Any extra room
-      // in shorter states falls to the bottom (the column is justify-start on
-      // mobile), so the titles and image keep their positions.
+      // resizes the column — the stack keeps its height and the image above it
+      // never shifts. Any extra room in shorter states falls to the bottom (the
+      // column is justify-start on mobile), so the titles keep their positions.
       const col = textColRef.current;
       const measure = () => {
         if (!col) return;
@@ -219,12 +219,12 @@ export default function Problem() {
         </div>
 
         {/* Side distance matches the hero headline's (px-8 / md:px-16 / lg:px-32).
-            Two columns on desktop; on phones it stacks: titles on top, image
-            below. */}
+            Two columns on desktop; on phones it stacks: image on top, titles
+            below (the order utilities). */}
         <div className="grid w-full grid-cols-[1fr_1.3fr] items-stretch gap-12 px-8 md:px-16 lg:px-32 max-md:flex max-md:flex-col max-md:gap-6">
           {/* Right (start side in RTL) — the problems we solve.
               Spread to match the image's height, top and bottom. */}
-          <div ref={textColRef} className="flex flex-col justify-between text-right max-md:justify-start max-md:gap-5">
+          <div ref={textColRef} className="flex flex-col justify-between text-right max-md:order-2 max-md:justify-start max-md:gap-5">
             {PROBLEMS.map((problem, index) => (
               <ProblemPoint
                 key={problem.word}
@@ -239,7 +239,7 @@ export default function Problem() {
           {/* Left — image of the selected problem */}
           <div
             ref={imageColRef}
-            className="relative aspect-3/2 w-full self-center overflow-visible rounded-brand max-md:max-h-[42dvh]"
+            className="relative aspect-3/2 w-full self-center overflow-visible rounded-brand max-md:order-1 max-md:max-h-[42dvh]"
           >
             {PROBLEMS.map((problem, index) => (
               // eslint-disable-next-line @next/next/no-img-element

@@ -27,6 +27,8 @@ export default function CameraScreen() {
         src="/assets/Screens/camera-road.svg"
         alt=""
         draggable={false}
+        loading="lazy"
+        decoding="async"
         className="absolute inset-0 h-full w-full object-cover"
       />
 

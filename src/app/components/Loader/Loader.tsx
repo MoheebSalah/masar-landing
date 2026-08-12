@@ -216,6 +216,10 @@ export default function Loader() {
         src="/assets/pothole.webp"
         alt=""
         aria-hidden="true"
+        // First thing the visitor sees, so it jumps the queue rather than
+        // waiting behind the fonts and the hero video.
+        fetchPriority="high"
+        decoding="async"
         className="col-start-1 row-start-1 w-96 opacity-0 md:w-140"
       />
       {/* Detection bounding box — glitches, then settles over the pothole.

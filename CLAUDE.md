@@ -33,7 +33,7 @@
 
 # guidlines : 
 
-- Only use tehe colours we have
+- Only use the colours we have
 - No Background for icons, unless it's a button.
 - No Border.
 - light shadow only.

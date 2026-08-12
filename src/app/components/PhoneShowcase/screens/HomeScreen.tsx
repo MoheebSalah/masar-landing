@@ -95,6 +95,8 @@ export default function HomeScreen({ dark }: Props) {
               src={dark ? "/assets/Screens/map-dark.svg" : "/assets/Screens/map-light.svg"}
               alt=""
               draggable={false}
+              loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover"
             />
             <div className="absolute inset-x-0 bottom-0 h-[104px] bg-linear-to-t from-(--sv-mapveil) to-transparent" />
