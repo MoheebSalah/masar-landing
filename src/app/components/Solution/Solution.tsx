@@ -102,9 +102,16 @@ export default function Solution() {
       tl.to(rightRef.current, { x: 0, ease: "none", duration: 4 }, 0);
       tl.to(leftRef.current, { x: 0, ease: "none", duration: 4 }, 0);
 
-      // Crossfade through the frames, one transition per scroll segment.
+      // Crossfade through the frames. The cues are deliberately uneven rather
+      // than one transition per scroll segment: back-to-back fades never leave
+      // any frame alone on screen for more than an instant. Frame 3 — the
+      // middle of the five — is the one to dwell on, so it gets a long solo
+      // stretch (~1.25 of the timeline's 4) while the others pass through
+      // quickly. Frame 5 lands exactly as the two sentence halves meet.
+      const frameFade = 0.45;
+      const frameCues = [0.4, 1.15, 2.85, 3.55]; // Frame 2, 3, 4, 5 fade-in points
       frames.slice(1).forEach((frame, i) => {
-        tl.to(frame, { opacity: 1, ease: "none", duration: 1 }, i);
+        tl.to(frame, { opacity: 1, ease: "none", duration: frameFade }, frameCues[i]);
       });
 
       return () => {
