@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { signalLoaderDone } from "./loaderSignal";
-import { isHeroVideoReady, onHeroVideoReady } from "../Hero/heroVideoSignal";
+import { isHeroFootageReady, onHeroFootageReady } from "../Hero/heroFootageSignal";
 import { getLenis } from "../SmoothScroll/lenisInstance";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -166,7 +166,7 @@ export default function Loader() {
       // it reads as still working rather than stalled. Capped hard — a slow
       // connection costs one extra beat, never a hung page.
       const holdForFootage = (proceed: () => void) => {
-        if (isHeroVideoReady()) {
+        if (isHeroFootageReady()) {
           proceed();
           return;
         }
@@ -186,7 +186,7 @@ export default function Loader() {
           gsap.set(frame, { scale: 0.5 });
           proceed();
         };
-        const unsubscribe = onHeroVideoReady(release);
+        const unsubscribe = onHeroFootageReady(release);
         gsap.delayedCall(2.2, release);
       };
 
@@ -252,7 +252,7 @@ export default function Loader() {
         alt=""
         aria-hidden="true"
         // First thing the visitor sees, so it jumps the queue rather than
-        // waiting behind the fonts and the hero video.
+        // waiting behind the fonts and the hero frames.
         fetchPriority="high"
         decoding="async"
         className="col-start-1 row-start-1 w-96 opacity-0 md:w-140"

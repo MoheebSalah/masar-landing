@@ -5,6 +5,25 @@ type SceneCaptionProps = {
   to: number;
   /** Where the card sits over the footage — absolute-position utilities. */
   position: string;
+  /**
+   * How this scene is framed on phones, where the footage is reshaped per
+   * scene rather than run full-bleed throughout. Desktop ignores it.
+   *
+   * `band` is the horizontal slice of the (square) mobile frame to show, as
+   * [start, width] fractions. `box` is where that slice sits on screen, as
+   * [x, y, width, height] fractions of the viewport — every scene runs the
+   * full width and sits flush to the top or bottom edge, so the footage reads
+   * as part of the screen rather than a card floating on it. `radius` is the
+   * box's corner in CSS pixels, and stays 0 for the same reason.
+   *
+   * Every number is tweened between scenes, so the framing morphs rather than
+   * cutting: the box glides and resizes while the crop pans across the frame.
+   */
+  mobileFrame: {
+    band: [number, number];
+    box: [number, number, number, number];
+    radius: number;
+  };
   /** Headline. Split into words so each one can shade in on its own. */
   title: string;
   /** The scene's supporting line. */
@@ -12,19 +31,22 @@ type SceneCaptionProps = {
 };
 
 /**
- * One title + paragraph card that rides over the scroll-scrubbed hero footage.
+ * One title + paragraph that rides over the scroll-driven hero footage — set
+ * straight onto the frame, with nothing behind it. The footage is near-white
+ * throughout, so the type carries itself in the page's own ink.
  *
  * The component is purely presentational: it publishes its cue points as data
  * attributes and marks its animatable parts, and Hero's single scrubbed
  * timeline picks them up from the DOM. Two nested wrappers on purpose — the
  * outer one carries the Tailwind positioning (including any `translate`
- * utilities), the inner card is what GSAP transforms, so the two never fight
+ * utilities), the inner block is what GSAP transforms, so the two never fight
  * over the same property.
  */
 export default function SceneCaption({
   from,
   to,
   position,
+  mobileFrame,
   title,
   children,
 }: SceneCaptionProps) {
@@ -34,10 +56,7 @@ export default function SceneCaption({
         data-scene
         data-from={from}
         data-to={to}
-        // Translucent plate so the text survives the video's near-white frames.
-        // The blur is desktop-only (it's the single most expensive paint on
-        // phones); mobile leans on a denser tint instead.
-        className="rounded-brand bg-dark/80 px-7 py-6 shadow-[0_24px_60px_-32px_rgba(14,19,18,0.85)] md:bg-dark/72 md:px-9 md:py-8 md:backdrop-blur-md"
+        data-mobile-frame={JSON.stringify(mobileFrame)}
       >
         {/* Small primary marks that pop in ahead of the words */}
         <div className="mb-5 flex items-center gap-2" aria-hidden="true">
@@ -49,7 +68,7 @@ export default function SceneCaption({
         {/* A wrapping flex row so every word is its own box and the gap keeps
             the spacing even — an inline-block run would swallow the whitespace
             between the spans. */}
-        <h2 className="flex flex-wrap gap-x-[0.28em] font-heading text-h3 leading-tight text-text-dark max-md:text-[1.75rem]">
+        <h2 className="flex flex-wrap gap-x-[0.28em] font-heading text-h3 leading-tight text-text max-md:text-[1.75rem]">
           {title.split(" ").map((word, i) => (
             <span key={`${word}-${i}`} data-scene-word>
               {word}
@@ -57,9 +76,13 @@ export default function SceneCaption({
           ))}
         </h2>
 
+        {/* Black like the heading rather than the usual subtext grey: with no
+            plate under it, this line crosses whatever the frame happens to be —
+            and mid-grey type over the mid-grey buildings in the closing scene
+            all but disappears. The hierarchy comes from size and face instead. */}
         <p
           data-scene-body
-          className="mt-4 font-sans text-t4 leading-relaxed text-subtext-dark max-md:text-t5"
+          className="mt-4 font-sans text-t4 leading-relaxed text-text max-md:text-t5"
         >
           {children}
         </p>
