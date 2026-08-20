@@ -159,13 +159,15 @@ export default function Hero() {
         const to = INTRO + Number(caption.dataset.to);
         const words = caption.querySelectorAll("[data-scene-word]");
         const body = caption.querySelector("[data-scene-body]");
-        const accents = caption.querySelectorAll("[data-scene-accent]");
+        const edges = Array.from(
+          caption.querySelectorAll<HTMLElement>("[data-scene-edge]")
+        );
 
         // A gate rather than an animation, and the one tween that keeps every
         // other scene's text off the frame. A staggered fromTo only renders its
-        // "from" state for the first target, so the words and marks below can't
-        // be trusted to start hidden on their own — this single un-staggered
-        // tween covers the whole block.
+        // "from" state for the first target, so the words below can't be
+        // trusted to start hidden on their own — this single un-staggered tween
+        // covers the whole block.
         tl.fromTo(
           caption,
           { autoAlpha: 0 },
@@ -173,22 +175,21 @@ export default function Hero() {
           from
         );
 
-        // With no plate to reveal, the type does its own arriving: the primary
-        // marks pop in first…
-        tl.fromTo(
-          accents,
-          { scale: 0, autoAlpha: 0 },
-          {
-            scale: 1,
-            autoAlpha: 1,
-            duration: 0.45,
-            stagger: 0.08,
-            ease: "back.out(2.2)",
-          },
-          from
-        );
+        // The rule draws itself around the words, one edge after the next, like
+        // the detection box in the footage closing on what it found. Linear and
+        // evenly divided so the trace holds a steady speed through the corners.
+        const lap = IN * 1.3;
+        edges.forEach((edge, i) => {
+          const axis = edge.dataset.sceneEdge === "x" ? "scaleX" : "scaleY";
+          tl.fromTo(
+            edge,
+            { [axis]: 0 },
+            { [axis]: 1, duration: lap / edges.length, ease: "none" },
+            from + (lap / edges.length) * i
+          );
+        });
 
-        // …then the words rise one by one, each shading out of primary and
+        // The words rise one by one behind it, each shading out of primary and
         // into the page's ink, which is where they stay.
         tl.fromTo(
           words,

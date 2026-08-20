@@ -66,13 +66,18 @@ export default function Statement() {
   return (
     // A curtain, not the next section down: the negative margin pulls the card
     // back over the last screen of the hero, so it climbs the viewport on its
-    // rounded lip while the footage behind it holds perfectly still. The pull
-    // is exactly one stage-height, which is what lets the hero's sticky stage
-    // release at the same instant the card finishes covering it.
+    // rounded lip while the footage behind it holds perfectly still.
+    //
+    // The card itself is only half a screen tall (a quarter on phones) — as
+    // much room as the line needs and no more. The pull stays a full stage
+    // height regardless, because that is what times the rise against the
+    // hero's sticky release, not the card's own height. Whatever the card
+    // doesn't cover by then, the Solution section behind it does: same
+    // background, no lip of its own, so the two read as one panel.
     <section
       id="statement"
       ref={sectionRef}
-      className="relative z-10 mt-[-100vh] flex h-screen w-full flex-col items-center justify-center gap-10 rounded-t-brand bg-background px-8 max-md:gap-8"
+      className="relative z-10 mt-[-100vh] flex h-[50vh] w-full flex-col items-center justify-center gap-10 rounded-t-brand bg-background px-8 max-md:h-[25vh] max-md:gap-6"
     >
       <div ref={accentsRef} className="flex items-center gap-2.5" aria-hidden="true">
         <span className="block h-2.5 w-2.5 rounded-full bg-primary" />

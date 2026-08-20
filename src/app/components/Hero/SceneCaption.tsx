@@ -57,18 +57,45 @@ export default function SceneCaption({
         data-from={from}
         data-to={to}
         data-mobile-frame={JSON.stringify(mobileFrame)}
+        className="relative"
       >
-        {/* Small primary marks that pop in ahead of the words */}
-        <div className="mb-5 flex items-center gap-2" aria-hidden="true">
-          <span data-scene-accent className="block h-2 w-2 rounded-full bg-primary" />
-          <span data-scene-accent className="block h-2 w-2 rounded-full bg-primary/60" />
-          <span data-scene-accent className="block h-2 w-2 rotate-45 bg-primary/35" />
+        {/* A thin primary rule around the words — the same shape the footage
+            throws around a pothole the moment it spots one, so the caption
+            reads as the system locking onto the scene.
+
+            Four scaled edges rather than one stroked <rect>: the box has to
+            stretch to whatever the text needs, and a dashed stroke through a
+            non-uniform scale doesn't survive it — the dash pattern is measured
+            in one space and the geometry drawn in another, so the lap comes
+            out short. Edges are listed in lap order, each anchored where the
+            previous one finished, so scaling them in turn traces the rectangle
+            once round from the top-right. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-x-6 -inset-y-5 max-md:-inset-4"
+        >
+          <span
+            data-scene-edge="x"
+            className="absolute inset-x-0 top-0 h-[1.5px] origin-right bg-primary"
+          />
+          <span
+            data-scene-edge="y"
+            className="absolute inset-y-0 left-0 w-[1.5px] origin-top bg-primary"
+          />
+          <span
+            data-scene-edge="x"
+            className="absolute inset-x-0 bottom-0 h-[1.5px] origin-left bg-primary"
+          />
+          <span
+            data-scene-edge="y"
+            className="absolute inset-y-0 right-0 w-[1.5px] origin-bottom bg-primary"
+          />
         </div>
 
         {/* A wrapping flex row so every word is its own box and the gap keeps
             the spacing even — an inline-block run would swallow the whitespace
             between the spans. */}
-        <h2 className="flex flex-wrap gap-x-[0.28em] font-heading text-h3 leading-tight text-text max-md:text-[1.75rem]">
+        <h2 className="relative flex flex-wrap gap-x-[0.28em] font-heading text-h2 leading-tight text-text max-md:text-h3">
           {title.split(" ").map((word, i) => (
             <span key={`${word}-${i}`} data-scene-word>
               {word}
@@ -82,7 +109,7 @@ export default function SceneCaption({
             all but disappears. The hierarchy comes from size and face instead. */}
         <p
           data-scene-body
-          className="mt-4 font-sans text-t4 leading-relaxed text-text max-md:text-t5"
+          className="relative mt-4 font-sans text-t2 leading-relaxed text-text max-md:text-t3"
         >
           {children}
         </p>
