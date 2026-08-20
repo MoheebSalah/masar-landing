@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { signalLoaderDone } from "./loaderSignal";
+import { isHeroVideoReady, onHeroVideoReady } from "../Hero/heroVideoSignal";
 import { getLenis } from "../SmoothScroll/lenisInstance";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -158,13 +159,47 @@ export default function Loader() {
       );
       intro.to(label, { autoAlpha: 1, duration: 0.25 }, 0.35);
 
+      // The hero behind this screen is a scroll-scrubbed clip, so it wants a
+      // buffer before the visitor's first flick of the wheel. The loading
+      // screen is the natural place to spend that wait: hold at the locked-on
+      // frame until the footage says it's ready, keeping the box breathing so
+      // it reads as still working rather than stalled. Capped hard — a slow
+      // connection costs one extra beat, never a hung page.
+      const holdForFootage = (proceed: () => void) => {
+        if (isHeroVideoReady()) {
+          proceed();
+          return;
+        }
+        const breathe = gsap.to(frame, {
+          scale: 0.54,
+          duration: 0.6,
+          yoyo: true,
+          repeat: -1,
+          ease: "sine.inOut",
+        });
+        let released = false;
+        const release = () => {
+          if (released) return;
+          released = true;
+          unsubscribe();
+          breathe.kill();
+          gsap.set(frame, { scale: 0.5 });
+          proceed();
+        };
+        const unsubscribe = onHeroVideoReady(release);
+        gsap.delayedCall(2.2, release);
+      };
+
       // The frame breathes as it locks onto the pothole — staying dead centred
       // the whole time. It pulses: shrinking well in (−25% of the initial
       // size), springing back out a touch (+5% over it), then repeating. Each
       // shrink takes longer than the quicker spring back out, giving it a
       // measured "closing in" feel before it settles. The moment it settles,
       // the reveal fires — this is what ends the loader.
-      const lock = gsap.timeline({ delay: 0.6, onComplete: reveal });
+      const lock = gsap.timeline({
+        delay: 0.6,
+        onComplete: () => holdForFootage(reveal),
+      });
       // shrink well in
       lock.to(frame, { scale: 0.8, duration: 0.38, ease: "power2.inOut" }, 0);
       // spring back out a touch (quicker)

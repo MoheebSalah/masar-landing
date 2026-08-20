@@ -135,8 +135,8 @@ export default function Footer() {
                   <h3 className="text-t4 font-bold text-white/70">تصفّح</h3>
                   <ul className="mt-5 space-y-3 text-t4">
                     <li>
-                      <a href="#problem" className="transition-opacity duration-300 hover:opacity-70">
-                        المشكلة
+                      <a href="#statement" className="transition-opacity duration-300 hover:opacity-70">
+                        التحدي
                       </a>
                     </li>
                     <li>

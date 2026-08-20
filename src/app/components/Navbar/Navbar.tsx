@@ -22,14 +22,16 @@ export default function Navbar() {
     const onScroll = () => {
       const y = window.scrollY;
 
-      // Shrink as soon as the visitor leaves the very top of the page.
-      setScrolled(y > 10);
+      // Everything keys off the same moment: the point where the hero's opening
+      // headline has lifted away and the scroll-driven footage takes the stage.
+      // Until then the bar sits transparent over the near-white video with dark
+      // marks; past it, it gets out of the way — the story below is the point.
+      const pastIntro = y > window.innerHeight * 0.4;
+      setScrolled(pastIntro);
 
-      // While the hero (a full viewport tall) is still on screen the navbar
-      // stays put. Once it's scrolled past, hide the navbar when moving down
-      // and slide it back in from the top when moving up.
-      const pastHero = y > window.innerHeight;
-      if (!pastHero) {
+      // Once past that point, hide on the way down and slide back in from the
+      // top on the way up.
+      if (!pastIntro) {
         setHidden(false);
       } else if (y > lastY.current + 4) {
         setHidden(true);
@@ -87,10 +89,11 @@ export default function Navbar() {
     return unsubscribe;
   }, []);
 
-  // The mobile bar keeps its logo + burger white the whole way down the page — a
-  // black gradient behind them (below) guarantees contrast over any section. The
-  // only exception is when the light dropdown card is open, where they go dark.
-  const mobileDark = menuOpen;
+  // The mobile bar's marks are white for most of the page — a black gradient
+  // behind them (below) guarantees contrast over any section. They flip dark
+  // over the hero's near-white opening footage, and while the light dropdown
+  // card is open.
+  const mobileDark = menuOpen || !scrolled;
 
   return (
     <>
@@ -114,7 +117,7 @@ export default function Navbar() {
             href="#"
             aria-label="مسار"
             className={`relative flex items-center transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              scrolled ? "text-on-primary" : "text-white"
+              scrolled ? "text-on-primary" : "text-text"
             }`}
           >
             <Logo
@@ -129,7 +132,7 @@ export default function Navbar() {
             ref={linksRef}
             dir="rtl"
             className={`flex items-center gap-8 text-t3 transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              scrolled ? "text-on-primary" : "text-text-dark"
+              scrolled ? "text-on-primary" : "text-text"
             }`}
           >
             <NavLink href="#about">من نحن</NavLink>
@@ -146,7 +149,7 @@ export default function Navbar() {
         >
           <div
             className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-black/35 via-black/10 to-transparent transition-opacity duration-300 ${
-              menuOpen ? "opacity-0" : "opacity-100"
+              mobileDark ? "opacity-0" : "opacity-100"
             }`}
           />
 
