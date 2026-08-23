@@ -10,32 +10,29 @@ gsap.registerPlugin(ScrollTrigger);
 
 // Detection clips shown in the carousel, in display order.
 const VIDEOS = [
-  "/assets/Carousel/Carousel 1.mp4",
-  "/assets/Carousel/Carousel 2.mp4",
-  "/assets/Carousel/Carousel 3.mp4",
-  "/assets/Carousel/Carousel 4.mp4",
-  "/assets/Carousel/Carousel 5.mp4",
+  "/assets/Carousel/Carousel 1.v2.mp4",
+  "/assets/Carousel/Carousel 2.v2.mp4",
+  "/assets/Carousel/Carousel 3.v2.mp4",
+  "/assets/Carousel/Carousel 4.v2.mp4",
 ];
 
 // Lightweight ~720px re-encodes served to phones instead of the full-resolution
 // clips above — a fraction of the bytes for a screen that never shows them
 // larger than a phone frame.
 const MOBILE_VIDEOS = [
-  "/assets/Carousel/Carousel 1.mobile.mp4",
-  "/assets/Carousel/Carousel 2.mobile.mp4",
-  "/assets/Carousel/Carousel 3.mobile.mp4",
-  "/assets/Carousel/Carousel 4.mobile.mp4",
-  "/assets/Carousel/Carousel 5.mobile.mp4",
+  "/assets/Carousel/Carousel 1.v2.mobile.mp4",
+  "/assets/Carousel/Carousel 2.v2.mobile.mp4",
+  "/assets/Carousel/Carousel 3.v2.mobile.mp4",
+  "/assets/Carousel/Carousel 4.v2.mobile.mp4",
 ];
 
 // First-frame stills. On phones the clips don't autoplay, so each frame shows
 // its poster (a few KB) and no video is fetched until the visitor taps play.
 const POSTERS = [
-  "/assets/Carousel/Carousel 1.poster.webp",
-  "/assets/Carousel/Carousel 2.poster.webp",
-  "/assets/Carousel/Carousel 3.poster.webp",
-  "/assets/Carousel/Carousel 4.poster.webp",
-  "/assets/Carousel/Carousel 5.poster.webp",
+  "/assets/Carousel/Carousel 1.v2.poster.webp",
+  "/assets/Carousel/Carousel 2.v2.poster.webp",
+  "/assets/Carousel/Carousel 3.v2.poster.webp",
+  "/assets/Carousel/Carousel 4.v2.poster.webp",
 ];
 
 // How the outgoing/incoming clips look at one full step from centre: pushed a
@@ -363,6 +360,12 @@ export default function SeeInAction() {
     settle(real + n * Math.round((current - real) / n));
   };
 
+  // The second clip is a side-by-side of the same detection run, labelled in
+  // English on the left half and Arabic on the right. Its two tags show only
+  // once that clip has settled, so they never ride along with a slide in
+  // motion.
+  const bilingualShown = activeDot === 1 && !transitioning;
+
   return (
     <section
       ref={sectionRef}
@@ -440,6 +443,39 @@ export default function SeeInAction() {
                 </video>
               </div>
             ))}
+
+            {/* Language tags for the side-by-side clip: one under each half,
+                sliding down out from beneath the frame and tucking back up on
+                the way out. The strip is absolutely positioned and clipped at
+                the frame's bottom edge, so it adds no height and shifts
+                nothing. Each tag is centred on `top-9.25` (37px = the 32px gap plus
+                half the dots' 10px height), so it lines up with the indicator
+                whatever size the tag is. The dots are centred and these sit at
+                the quarter marks, so the two never meet — the tags step down a
+                size on phones to keep that clearance on narrow screens. */}
+            <div
+              aria-hidden={!bilingualShown}
+              className="pointer-events-none absolute inset-x-0 top-full z-10 h-20 overflow-hidden"
+            >
+              <div className="absolute left-1/4 top-9.25 -translate-x-1/2 -translate-y-1/2">
+                <span
+                  className={`block rounded-brand bg-primary px-4 py-1.5 font-sans text-t4 text-on-primary transition-transform duration-200 ease-out max-md:px-3 max-md:py-1 max-md:text-t5 ${
+                    bilingualShown ? "translate-y-0" : "-translate-y-24"
+                  }`}
+                >
+                  English
+                </span>
+              </div>
+              <div className="absolute left-3/4 top-9.25 -translate-x-1/2 -translate-y-1/2">
+                <span
+                  className={`block rounded-brand bg-primary px-4 py-1.5 font-sans text-t4 text-on-primary transition-transform duration-200 ease-out max-md:px-3 max-md:py-1 max-md:text-t5 ${
+                    bilingualShown ? "translate-y-0" : "-translate-y-24"
+                  }`}
+                >
+                  العربية
+                </span>
+              </div>
+            </div>
 
             {/* Custom cursor (desktop): the play/pause glyph trailing the
                 pointer. Both stay mounted and cross-fade so switching never

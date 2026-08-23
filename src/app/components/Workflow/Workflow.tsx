@@ -16,21 +16,21 @@ const STEPS = [
     heading: "رصد الأضرار تلقائيًا",
     paragraph:
       "كاميرا واحدة على الطريق تكفي؛ يرصد مسار الحفر والتشققات لحظة مرور المركبة، ويحوّل كل ضرر إلى سجل دقيق مربوط بموقعه على الخريطة دون أي إدخال يدوي.",
-    media: "/assets/Workflow/Workflow%201.mp4",
+    media: "/assets/Workflow/Workflow%201.v2.mp4",
     reverse: false,
   },
   {
     heading: "تصنيف درجة الخطورة",
     paragraph:
       "يقيس النظام حجم الضرر وعمقه وموضعه على المسار، ثم يمنحه درجة خطورة واضحة، فتُرتَّب البلاغات حسب الأولوية بدل أن تتكدّس بلا معيار.",
-    media: "/assets/Workflow/Workflow%202.webp",
+    media: "/assets/Workflow/Workflow%202.v2.webp",
     reverse: true,
   },
   {
     heading: "خطة إصلاح قابلة للمتابعة",
     paragraph:
       "تتحوّل البلاغات إلى خطة إصلاح منظّمة يمكن متابعتها خطوة بخطوة، مع تتبّع مباشر لحالة كل موقع من الرصد وحتى إغلاق الطلب.",
-    media: "/assets/Workflow/Workflow%203.mp4",
+    media: "/assets/Workflow/Workflow%203.v2.webp",
     reverse: false,
   },
 ];
