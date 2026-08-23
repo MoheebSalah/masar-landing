@@ -113,10 +113,10 @@ export default function Hero() {
           trigger: section,
           start: "top top",
           // Two stage-heights are held back from the scrub: one is the stage
-          // itself, the other is the run the statement card needs to climb the
-          // screen while the stage stays stuck behind it. The footage therefore
-          // lands on its last frame exactly as the card starts to rise — no
-          // stretch of scrolling where nothing moves.
+          // itself, the other is the screen the picture spends dissolving into
+          // the statement. The footage therefore lands on its last frame
+          // exactly as that handover begins — no stretch of scrolling where
+          // nothing moves.
           //
           // Measured off the stage, not window.innerHeight: the section height
           // and the card's negative margin are both in vh, and on phones those
@@ -265,6 +265,28 @@ export default function Hero() {
         );
       });
 
+      // The handover. With the footage on its last frame the stage still has
+      // one screen of sticky scroll in it, and that screen is spent dissolving
+      // the picture away where it stands while the statement panel — laid over
+      // exactly this patch of viewport, and starting its own sticky run on the
+      // same scroll position — comes up through it. Neither moves; they only
+      // trade opacity, so the story ends by fading out rather than by being
+      // pushed off by a card.
+      //
+      // Its own trigger rather than a tail on the scrub above, because the two
+      // measure different runs: the scrub stops a stage-height short of this.
+      const handover = () => section.offsetHeight - stage.offsetHeight * 2;
+      gsap.to(stage, {
+        autoAlpha: 0,
+        ease: "none",
+        scrollTrigger: {
+          trigger: section,
+          start: () => `top top-=${handover()}`,
+          end: () => `top top-=${handover() + stage.offsetHeight}`,
+          scrub: 0.6,
+          invalidateOnRefresh: true,
+        },
+      });
     }, section);
 
     return () => ctx.revert();
@@ -292,10 +314,11 @@ export default function Hero() {
 
   return (
     // Tall enough to hold the whole scrubbed run: one screen of stage, ~14vh of
-    // scroll per second of footage, and a closing screen the statement card
-    // climbs while the stage stays stuck behind it. Phones get a shorter run so
-    // the story isn't a marathon of swipes. These heights are the single source
-    // of truth — the timeline measures the section rather than restating them.
+    // scroll per second of footage, and a closing screen the picture spends
+    // dissolving into the statement while the stage stays stuck behind it.
+    // Phones get a shorter run so the story isn't a marathon of swipes. These
+    // heights are the single source of truth — the timeline measures the
+    // section rather than restating them.
     <section
       ref={sectionRef}
       className="relative h-[640vh] max-md:h-[560vh]"

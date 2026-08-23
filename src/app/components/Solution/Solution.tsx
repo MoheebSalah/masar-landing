@@ -79,17 +79,27 @@ export default function Solution() {
         },
       });
 
+      // The scene's own length, and the still screen in front of it. The
+      // statement panel is laid over this section's first screen and dissolves
+      // across it, so the section is pinned — and therefore composed and
+      // motionless — before anything here starts moving. Without the hold the
+      // scene would play its opening behind a curtain nobody has lifted yet.
+      // Everything below is offset by HOLD and the pin lengthened to match, so
+      // the scene's own pace is exactly what it was.
+      const SCENE = 4;
+      const HOLD = SCENE / 3; // one viewport height, at 4 units per 300%
+
       // The point in the pinned scroll where the section swaps to dark: just as
       // the two halves are about to meet. Because the swap still happens inside
       // Solution, it and the dark Workflow below read as one continuous
       // background — no hard seam between the sections.
-      const DARK_AT = 0.68;
+      const DARK_AT = (HOLD + 0.68 * SCENE) / (HOLD + SCENE);
 
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
           start: "top top", // begins once the section fills the screen
-          end: "+=300%", // three viewport-heights of scroll drive the scene
+          end: "+=400%", // one viewport-height of hold, then three of scene
           pin: true,
           scrub: 1, // smooth, scroll-tied progress
           onUpdate: (self) => flipAt(self.progress, DARK_AT),
@@ -99,8 +109,8 @@ export default function Solution() {
       });
 
       // The two halves glide toward each other across the whole scroll.
-      tl.to(rightRef.current, { x: 0, ease: "none", duration: 4 }, 0);
-      tl.to(leftRef.current, { x: 0, ease: "none", duration: 4 }, 0);
+      tl.to(rightRef.current, { x: 0, ease: "none", duration: SCENE }, HOLD);
+      tl.to(leftRef.current, { x: 0, ease: "none", duration: SCENE }, HOLD);
 
       // Crossfade through the frames. The cues are deliberately uneven rather
       // than one transition per scroll segment: back-to-back fades never leave
@@ -111,7 +121,11 @@ export default function Solution() {
       const frameFade = 0.45;
       const frameCues = [0.4, 1.15, 2.85, 3.55]; // Frame 2, 3, 4, 5 fade-in points
       frames.slice(1).forEach((frame, i) => {
-        tl.to(frame, { opacity: 1, ease: "none", duration: frameFade }, frameCues[i]);
+        tl.to(
+          frame,
+          { opacity: 1, ease: "none", duration: frameFade },
+          HOLD + frameCues[i]
+        );
       });
 
       return () => {
@@ -148,15 +162,20 @@ export default function Solution() {
           gsap.to(frames[0], { autoAlpha: 1, duration: 0.9, ease: "power2.out" }),
       });
 
+      // As on desktop, a screen of stillness in front of the scene while the
+      // statement panel dissolves over it.
+      const SCENE = 3;
+      const HOLD = SCENE / 1.25; // one viewport height, at 3 units per 125%
+
       // Halfway through the pinned scroll — the lines are still travelling, so
       // the background has already turned by the time they settle.
-      const DARK_AT = 0.5;
+      const DARK_AT = (HOLD + 0.5 * SCENE) / (HOLD + SCENE);
 
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
           start: "top top",
-          end: "+=125%", // a longer pinned scroll so the scene plays out slower
+          end: "+=225%", // one viewport-height of hold, then the scene's 125%
           pin: true,
           onUpdate: (self) => flipAt(self.progress, DARK_AT),
           onRefresh: (self) => flipAt(self.progress, DARK_AT),
@@ -169,11 +188,18 @@ export default function Solution() {
         },
       });
 
-      // Both lines glide from off-screen to centre, fading in as they arrive, and
-      // meet at t=3 (the end of the pinned scroll).
-      const converge = 3;
-      tl.to(rightRef.current, { x: 0, autoAlpha: 1, ease: "none", duration: converge }, 0);
-      tl.to(leftRef.current, { x: 0, autoAlpha: 1, ease: "none", duration: converge }, 0);
+      // Both lines glide from off-screen to centre, fading in as they arrive,
+      // and meet at the end of the pinned scroll.
+      tl.to(
+        rightRef.current,
+        { x: 0, autoAlpha: 1, ease: "none", duration: SCENE },
+        HOLD
+      );
+      tl.to(
+        leftRef.current,
+        { x: 0, autoAlpha: 1, ease: "none", duration: SCENE },
+        HOLD
+      );
 
       // Crossfade through the five frames. The cues are deliberately uneven: the
       // third frame is held on screen the longest (its solo stretch dwarfs the
@@ -182,7 +208,11 @@ export default function Solution() {
       const frameFade = 0.35;
       const frameCues = [0.35, 0.95, 2.2, 2.65]; // Frame 2, 3, 4, 5 fade-in points
       frames.slice(1).forEach((frame, i) => {
-        tl.to(frame, { opacity: 1, ease: "none", duration: frameFade }, frameCues[i]);
+        tl.to(
+          frame,
+          { opacity: 1, ease: "none", duration: frameFade },
+          HOLD + frameCues[i]
+        );
       });
 
       return () => {
