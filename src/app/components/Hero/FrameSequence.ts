@@ -20,31 +20,6 @@
  * bytes (a few KB each), so the whole sequence costs about as much memory as
  * one bitmap plus its downloads.
  */
-/**
- * Which slice of the frame to show, and where to put it on screen. Both rects
- * are fractions (0–1) — of the frame for the source, of the canvas for the
- * destination — so they survive any viewport size, and every number can be
- * tweened, which is what makes one scene's framing morph into the next.
- */
-export type FrameLayout = {
-  sx: number;
-  sy: number;
-  sw: number;
-  sh: number;
-  dx: number;
-  dy: number;
-  dw: number;
-  dh: number;
-  /** Corner radius in CSS pixels. */
-  radius: number;
-};
-
-/** The tint laid over the blurred backdrop — the page's own background. */
-const GLASS = "rgba(238, 234, 224, 0.62)";
-
-/** Width of the scratch canvas the backdrop is squeezed through. */
-const HAZE = 28;
-
 export default class FrameSequence {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
@@ -65,12 +40,8 @@ export default class FrameSequence {
 
   /** How far past 1 the backing store may go. */
   private readonly maxDensity: number;
-  /** Null means "fill the canvas with the whole frame" — the desktop case. */
-  private layout: FrameLayout | null = null;
-  /** Backing pixels per CSS pixel, kept from the last resize. */
-  private density = 1;
-  /** Scratch canvas for the cheap backdrop blur. Built on first use. */
-  private haze: HTMLCanvasElement | null = null;
+  /** Null means "cover the canvas with the whole frame" — the desktop case. */
+  private pan: number | null = null;
 
   constructor(canvas: HTMLCanvasElement, urls: string[], maxDensity = 2) {
     this.canvas = canvas;
@@ -129,13 +100,24 @@ export default class FrameSequence {
     this.pump();
   }
 
-  /**
-   * Reframe: which slice of the frame to show and where. Pass null to go back
-   * to filling the canvas with the whole frame. Repaints immediately, so it is
-   * safe to drive straight from a scrub.
+   /**
+   * Slide the viewing window across the frame. The window is always the full
+   * height of the footage, so how much of its width fits follows from the
+   * canvas' own shape — on a portrait phone that's about a quarter of it.
+   *
+   * `pan` names the point of the frame to centre that window on, as a fraction
+   * of the frame's width, and it is clamped so the window never runs off
+   * either end (0 therefore means "hard left", 1 "hard right"). Naming a point
+   * rather than a distance travelled is what makes one number safe on every
+   * screen: a taller, narrower viewport takes a narrower slice, and a window
+   * anchored to a *subject* stays on it while a window anchored to a fraction
+   * of the total travel slides off. Pass null to go back to covering the
+   * canvas with the whole frame — the desktop case. Safe to call every scroll
+   * frame.
    */
-  setLayout(layout: FrameLayout | null) {
-    this.layout = layout;
+  setPan(pan: number | null) {
+    if (pan === this.pan) return;
+    this.pan = pan;
     this.paint();
   }
 
@@ -147,7 +129,6 @@ export default class FrameSequence {
     const width = Math.round(rect.width * density);
     const height = Math.round(rect.height * density);
     if (this.canvas.width === width && this.canvas.height === height) return;
-    this.density = density;
     this.canvas.width = width;
     this.canvas.height = height;
     this.paint();
@@ -203,14 +184,13 @@ export default class FrameSequence {
       });
   }
 
-  /** Draw the held frame — either filling the canvas, or into its layout box. */
+  /** Draw the held frame, either centred or through the panning window. */
   private paint() {
     const bitmap = this.current;
     if (!bitmap) return;
     const { width, height } = this.canvas;
-    const layout = this.layout;
 
-    if (!layout) {
+    if (this.pan === null) {
       const scale = Math.max(width / bitmap.width, height / bitmap.height);
       const w = bitmap.width * scale;
       const h = bitmap.height * scale;
@@ -218,85 +198,19 @@ export default class FrameSequence {
       return;
     }
 
-    const dx = layout.dx * width;
-    const dy = layout.dy * height;
-    const dw = layout.dw * width;
-    const dh = layout.dh * height;
-    const covers = dw >= width - 1 && dh >= height - 1;
-
-    // Whatever the box leaves uncovered becomes frosted glass over the scene.
-    // The blur is a squeeze through a ~28px canvas and back, not a filter:
-    // two drawImage calls the GPU does for free, where a real `filter:blur`
-    // at this size is one of the most expensive things a phone can be asked
-    // to do every frame.
-    if (!covers) {
-      const haze = this.hazeCanvas(bitmap);
-      const scale = Math.max(width / haze.width, height / haze.height);
-      const hw = haze.width * scale;
-      const hh = haze.height * scale;
-      this.ctx.drawImage(haze, (width - hw) / 2, (height - hh) / 2, hw, hh);
-      this.ctx.fillStyle = GLASS;
-      this.ctx.fillRect(0, 0, width, height);
-    }
-
-    const density = this.density;
-    const radius = Math.min(layout.radius * density, dw / 2, dh / 2);
-
-    this.ctx.save();
-    // A whisper of a drop, laid down before the clip — a shadow painted inside
-    // one would be clipped away with everything else. The boxes run to the
-    // screen's edges, so this only ever shows along the horizontal seam, where
-    // its job is to part the sharp footage from the blur behind it rather than
-    // to lift a card off a surface. No vertical offset, so both edges get it.
-    if (!covers) {
-      this.ctx.shadowColor = "rgba(14, 19, 18, 0.16)";
-      this.ctx.shadowBlur = 28 * density;
-      this.ctx.fillStyle = "#eeeae0";
-      this.ctx.beginPath();
-      this.ctx.roundRect(dx, dy, dw, dh, radius);
-      this.ctx.fill();
-      this.ctx.shadowColor = "transparent";
-    }
-
-    this.ctx.beginPath();
-    this.ctx.roundRect(dx, dy, dw, dh, radius);
-    this.ctx.clip();
-
-    // Trim the source band to the box's shape rather than letterboxing it, so
-    // the crop stays centred on whatever the scene was framed around.
-    const fw = bitmap.width;
-    const fh = bitmap.height;
-    let sx = layout.sx * fw;
-    let sy = layout.sy * fh;
-    let sw = layout.sw * fw;
-    let sh = layout.sh * fh;
-    if (sw / sh > dw / dh) {
-      const trimmed = sh * (dw / dh);
-      sx += (sw - trimmed) / 2;
-      sw = trimmed;
-    } else {
-      const trimmed = sw / (dw / dh);
-      sy += (sh - trimmed) / 2;
-      sh = trimmed;
-    }
-    this.ctx.drawImage(bitmap, sx, sy, sw, sh, dx, dy, dw, dh);
-    this.ctx.restore();
-  }
-
-  /** The current frame squeezed onto a tiny canvas — the blur source. */
-  private hazeCanvas(bitmap: ImageBitmap) {
-    let haze = this.haze;
-    if (!haze) {
-      haze = document.createElement("canvas");
-      haze.width = HAZE;
-      haze.height = Math.max(
-        1,
-        Math.round((HAZE * bitmap.height) / bitmap.width)
-      );
-      this.haze = haze;
-    }
-    const hctx = haze.getContext("2d");
-    if (hctx) hctx.drawImage(bitmap, 0, 0, haze.width, haze.height);
-    return haze;
+    // The slice the canvas can hold at the frame's full height. `min` covers
+    // the screen too wide to need one — there the whole frame goes in, the
+    // height is trimmed instead, and the pan has nowhere left to travel.
+    const aspect = width / height;
+    const sw = Math.min(aspect * bitmap.height, bitmap.width);
+    const sh = sw / aspect;
+    const half = sw / 2;
+    const centre = Math.min(
+      Math.max(this.pan * bitmap.width, half),
+      bitmap.width - half
+    );
+    const sx = centre - half;
+    const sy = (bitmap.height - sh) / 2;
+    this.ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, width, height);
   }
 }

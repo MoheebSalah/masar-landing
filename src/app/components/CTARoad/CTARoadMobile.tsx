@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import CTAButton from "./CTAButton";
+import { getLenis } from "../SmoothScroll/lenisInstance";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -14,19 +15,30 @@ const ROAD_PATH =
   "M 235 50 C 235 150 150 165 150 260 C 150 355 235 370 235 470 C 235 545 175 555 175 620";
 const VB_H = 660; // viewBox height — the wipe travels this far
 
-export default function CTARoadMobile() {
+export default function CTARoadMobile({
+  sectionRef,
+}: {
+  sectionRef: RefObject<HTMLElement | null>;
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
+  // The catch is a one-time event for the whole visit: once the road has been
+  // laid, scrolling back up through the section must never grab hold again.
+  const playedRef = useRef(false);
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    const section = sectionRef.current;
+    if (!root || !section) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: { trigger: root, start: "top 75%", once: true },
-        defaults: { ease: "power2.out" },
-      });
+    const mm = gsap.matchMedia();
+
+    // Phones: the section catches the visitor, and their own scrolling is what
+    // lays the road. When the last beat lands the pin lets go for good.
+    mm.add("(max-width: 767px)", () => {
+      if (playedRef.current) return;
+
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
 
       // 1. The asphalt is wiped in from the top down (a clip rect growing its
       //    height), so it lays smoothly toward the button.
@@ -66,16 +78,76 @@ export default function CTARoadMobile() {
         { opacity: 0, scale: 0.85, duration: 0.5, ease: "back.out(1.8)" },
         revealStart + revealDur,
       );
-    }, root);
 
-    return () => ctx.revert();
-  }, []);
+      // The section is a little taller than a phone screen, so it is held at
+      // its centre — that keeps the heading, the whole road and the button on
+      // screen for the length of the scene.
+      const st = ScrollTrigger.create({
+        trigger: section,
+        start: "center center",
+        end: "+=160%", // how much scrolling it takes to lay the whole road
+        pin: true,
+        pinSpacing: true,
+        anticipatePin: 1,
+        scrub: true, // progress is the visitor's scroll, nothing else
+        animation: tl,
+        onLeave: () => release(),
+      });
+
+      // Letting go. Dropping the trigger also drops the spacer it inserted for
+      // the pin, so the page shortens and everything below it slides up. We
+      // measure how far the section actually moved and take exactly that much
+      // out of the scroll position in the same frame, so the view does not
+      // budge — the visitor only notices that nothing is holding them any
+      // more. Reverting the trigger restores the markup's authored state,
+      // which is the finished road, so the section stays fully drawn.
+      const release = () => {
+        if (playedRef.current) return;
+        playedRef.current = true;
+
+        // Deferred a frame: tearing a trigger down inside its own callback
+        // runs while ScrollTrigger is still mid-update.
+        requestAnimationFrame(() => {
+          const lenis = getLenis();
+          const before = section.getBoundingClientRect().top;
+
+          st.kill(true, true); // drop the pin, keep the road as drawn
+          // Both of these have to happen before the scroll is corrected:
+          // refresh() puts the scroll back where it recorded it, which would
+          // undo the correction if we applied it first.
+          lenis?.resize();
+          ScrollTrigger.refresh();
+
+          const shift = section.getBoundingClientRect().top - before;
+          const target = Math.max(0, window.scrollY + shift);
+
+          if (lenis) {
+            // Lenis interpolates from its own internal value, so nudging its
+            // position fields does nothing — the jump has to go through
+            // scrollTo, which resets its velocity. Whatever travel it still
+            // had queued is therefore re-issued from the new spot, so a flick
+            // that is mid-flight carries on instead of stopping dead here.
+            const carry = lenis.targetScroll - lenis.animatedScroll;
+            lenis.scrollTo(target, { immediate: true, force: true });
+            if (Math.abs(carry) > 1) lenis.scrollTo(target + carry, { force: true });
+          } else {
+            window.scrollTo(0, target);
+          }
+        });
+      };
+    });
+
+    return () => mm.revert();
+  }, [sectionRef]);
 
   return (
     <div ref={rootRef} className="mt-8 flex flex-col items-center md:hidden">
+      {/* The height cap is what makes the held scene work on a short phone:
+          the heading, the whole road and the button all have to be on screen
+          at once, so the road gives way rather than pushing them off. */}
       <svg
         viewBox={`0 0 340 ${VB_H}`}
-        className="w-full max-w-sm"
+        className="w-full max-w-sm max-h-[calc(100svh-12rem)]"
         fill="none"
         aria-hidden="true"
       >

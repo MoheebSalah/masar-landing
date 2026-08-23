@@ -6,23 +6,31 @@ type SceneCaptionProps = {
   /** Where the card sits over the footage — absolute-position utilities. */
   position: string;
   /**
-   * How this scene is framed on phones, where the footage is reshaped per
-   * scene rather than run full-bleed throughout. Desktop ignores it.
+   * How the footage is framed on phones, where the frame runs full-bleed at
+   * its own full height — far wider than a portrait screen can hold, so only
+   * a slice of it fits and the rest is reached by sliding that window
+   * sideways as the page scrolls. Desktop ignores this and fills the canvas.
    *
-   * `band` is the horizontal slice of the (square) mobile frame to show, as
-   * [start, width] fractions. `box` is where that slice sits on screen, as
-   * [x, y, width, height] fractions of the viewport — every scene runs the
-   * full width and sits flush to the top or bottom edge, so the footage reads
-   * as part of the screen rather than a card floating on it. `radius` is the
-   * box's corner in CSS pixels, and stays 0 for the same reason.
+   * `cut` is the footage second this scene's shot begins at, taken from the
+   * cuts in the clip itself: the window jumps to `from` there, which nothing
+   * can be seen to do because the picture changes completely on the same
+   * frame. It then travels to `to` over `span` of the shot, holding still for
+   * whatever is left. A scene that shouldn't move at all gives the same
+   * number twice.
    *
-   * Every number is tweened between scenes, so the framing morphs rather than
-   * cutting: the box glides and resizes while the crop pans across the frame.
+   * `from` and `to` are points on the frame — the fraction of its width the
+   * window centres on, clamped so it never runs off an end, which makes 0
+   * "hard left" and 1 "hard right". Write them as the thing being looked at,
+   * not as how far along the pan has got: how wide a slice fits depends on the
+   * viewport's shape, so a taller phone (or a browser whose URL bar has just
+   * slid away) takes a narrower one, and only a window anchored to the subject
+   * keeps it in shot on all of them.
    */
-  mobileFrame: {
-    band: [number, number];
-    box: [number, number, number, number];
-    radius: number;
+  mobilePan: {
+    cut: number;
+    from: number;
+    to: number;
+    span?: number;
   };
   /** Headline. Split into words so each one can shade in on its own. */
   title: string;
@@ -46,7 +54,7 @@ export default function SceneCaption({
   from,
   to,
   position,
-  mobileFrame,
+  mobilePan,
   title,
   children,
 }: SceneCaptionProps) {
@@ -56,7 +64,7 @@ export default function SceneCaption({
         data-scene
         data-from={from}
         data-to={to}
-        data-mobile-frame={JSON.stringify(mobileFrame)}
+        data-mobile-pan={JSON.stringify(mobilePan)}
         className="relative"
       >
         {/* A thin primary rule around the words — the same shape the footage

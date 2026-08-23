@@ -102,8 +102,9 @@ export default function CTARoad() {
           </p>
         </div>
 
-        {/* Phones stand the same road upright (top → bottom). */}
-        <CTARoadMobile />
+        {/* Phones stand the same road upright (top → bottom), and lay it as
+            the visitor scrolls — the section holds them for one screen. */}
+        <CTARoadMobile sectionRef={sectionRef} />
 
         {/* The signature: a road from detection to the booking button */}
         <div className="relative mt-8 hidden md:block">
