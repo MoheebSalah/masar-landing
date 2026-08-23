@@ -10,10 +10,20 @@ import SceneCaption from "./SceneCaption";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Runtime of the hero footage, in seconds. The scrubbed timeline runs one unit
-// per second of footage, so every caption cue below can be written in the same
-// units as the story — the sequence index is derived from it.
+// Runtime of each cut of the hero footage, in seconds. The scrubbed timeline
+// runs one unit per second of footage, so every caption cue below can be
+// written in the same units as the story — the sequence index is derived from
+// it. Phones get their own cut, shot portrait and half the length, so they get
+// their own runtime and their own cue list; nothing about the two is shared
+// beyond the shape of this file.
 const FOOTAGE = 28.36;
+// The phone cut is 14.83s on disk, but it opens and closes on fades to white of
+// its own — 0.4s in front, 0.8s behind. Both are trimmed off the sequence, so
+// what is left is 13.6s of picture and nothing else. The page does its own
+// arriving and leaving at both ends (the headline clears out over the first
+// frame, the statement dissolves up through the last), and a clip that had gone
+// white underneath either of them would hand over a blank screen.
+const MOBILE_FOOTAGE = 13.6;
 
 // Enough of the run downloaded, front to back, to hand the stage over. The rest
 // keeps arriving behind the visitor as they scroll; until a frame lands the
@@ -23,11 +33,21 @@ const READY_FRACTION = 0.14;
 // Timeline units spent on the opening headline clearing out before the footage
 // starts moving. At ~14vh of scroll per unit that's a little under half a
 // screen — one flick of the wheel and the stage is handed to the footage.
+// Phones run far more scroll per unit than that, so three units there would cost
+// most of a screen before anything moved; two keeps the handover about as quick
+// as it feels on desktop and leaves the rest of the run to the footage.
 const INTRO = 3;
+const MOBILE_INTRO = 2;
 
 // How long a caption takes to arrive and to leave, again in footage seconds.
+// The phone cut's scenes run half as long, so its captions have to move in and
+// out in half the footage-time to leave the same share of each scene sitting
+// still. In scroll they cost about the same, because its shorter run is
+// stretched over a proportionally taller section.
 const IN = 0.8;
 const OUT = 0.5;
+const MOBILE_IN = 0.5;
+const MOBILE_OUT = 0.35;
 
 export default function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -46,22 +66,30 @@ export default function Hero() {
 
     const phone = window.matchMedia("(max-width: 767px)").matches;
     const template = phone ? canvas.dataset.mobileSrc : canvas.dataset.src;
-    const count = Number(canvas.dataset.frames);
+    const count = Number(phone ? canvas.dataset.mobileFrames : canvas.dataset.frames);
     if (!template || !count) return;
 
     const urls = Array.from({ length: count }, (_, i) =>
       template.replace("[n]", String(i + 1).padStart(4, "0"))
     );
 
-    // Whatever it takes to do the upscale exactly once. Phones show about a
-    // quarter of the frame's width across the whole screen, so the picture is
-    // always enlarged somewhere; capping the backing store below the screen's
-    // own pixel ratio doesn't avoid that, it just splits one enlargement into
-    // two (canvas, then the browser), and two come out softer than one. A 3x
-    // phone therefore gets a 3x canvas. Desktop stays at 2x because it is
-    // already drawing the frame larger than the source at that point, so more
-    // backing pixels buy nothing and cost fill rate.
-    const sequence = new FrameSequence(canvas, urls, phone ? 3 : 2);
+    // Whatever it takes to do the upscale exactly once. Capping the backing
+    // store below the screen's own pixel ratio doesn't avoid an enlargement,
+    // it splits one into two — canvas, then browser — and two come out softer
+    // than one. A 3x phone therefore gets a 3x canvas, where the 1080-wide cut
+    // lands within a whisker of 1:1. Desktop stays at 2x because it is already
+    // drawing its frame larger than the source, so more backing pixels buy
+    // nothing and cost fill rate.
+    //
+    // The phone cut is composed 9:16 with its labels, framing marks and
+    // read-outs hard against all four edges, so it is fitted rather than
+    // cropped — see FrameFit.
+    const sequence = new FrameSequence(
+      canvas,
+      urls,
+      phone ? 3 : 2,
+      phone ? "fit-bottom" : "cover"
+    );
     sequenceRef.current = sequence;
     sequence.resize();
 
@@ -127,73 +155,51 @@ export default function Hero() {
         },
       });
 
+      // Which cut this visitor is watching. Everything downstream — the
+      // runtime, the caption cues, how long the headline takes to clear and how
+      // long a caption takes to arrive — is picked from it here and never
+      // branched on again.
+      const phone = window.matchMedia("(max-width: 767px)").matches;
+      const footage = phone ? MOBILE_FOOTAGE : FOOTAGE;
+      const intro = phone ? MOBILE_INTRO : INTRO;
+      const arrive = phone ? MOBILE_IN : IN;
+      const leave = phone ? MOBILE_OUT : OUT;
+
       // The opening headline lifts away the moment scrolling starts.
       tl.to(
         introRef.current,
-        { autoAlpha: 0, y: -70, scale: 0.94, duration: INTRO, ease: "power2.in" },
+        { autoAlpha: 0, y: -70, scale: 0.94, duration: intro, ease: "power2.in" },
         0
       );
-
-      // Phones can't hold the frame's width, so they show a slice of it and
-      // slide that window sideways through each shot — see `mobilePan` on the
-      // scene tags below. The window position is read straight off the
-      // playhead rather than tweened alongside it: a scrub runs both ways, and
-      // one function of time can't fall out of step with the frame on screen
-      // the way a second set of overlapping tweens could.
-      const phone = window.matchMedia("(max-width: 767px)").matches;
-      const pans = phone
-        ? captions.map(
-            (caption) =>
-              JSON.parse(caption.dataset.mobilePan ?? "{}") as {
-                cut: number;
-                from: number;
-                to: number;
-                span?: number;
-              }
-          )
-        : [];
-
-      const glide = gsap.parseEase("power1.inOut");
-      const panAt = (t: number) => {
-        let i = pans.length - 1;
-        while (i > 0 && t < pans[i].cut) i -= 1;
-        const shot = (i + 1 < pans.length ? pans[i + 1].cut : FOOTAGE) - pans[i].cut;
-        const travelled = gsap.utils.clamp(
-          0,
-          1,
-          (t - pans[i].cut) / (shot * (pans[i].span ?? 1))
-        );
-        return pans[i].from + (pans[i].to - pans[i].from) * glide(travelled);
-      };
 
       // The playhead is a plain object the timeline scrubs, kept in footage
       // seconds so it shares units with the caption cues. Each update just
       // names a frame; the sequence coalesces requests on its own, so calling
       // this on every scroll frame costs nothing.
       const playhead = { t: 0 };
-      if (phone) sequenceRef.current?.setPan(panAt(0));
       tl.to(
         playhead,
         {
-          t: FOOTAGE,
-          duration: FOOTAGE,
+          t: footage,
+          duration: footage,
           ease: "none",
           onUpdate: () => {
             const sequence = sequenceRef.current;
             if (!sequence) return;
-            if (phone) sequence.setPan(panAt(playhead.t));
-            const progress = Math.min(Math.max(playhead.t / FOOTAGE, 0), 1);
+            const progress = Math.min(Math.max(playhead.t / footage, 0), 1);
             sequence.seek(progress * (sequence.length - 1));
           },
         },
-        INTRO
+        intro
       );
 
       // Captions. Every cue is read off the markup, so the scene text and its
       // timing stay together in the JSX below.
       captions.forEach((caption) => {
-        const from = INTRO + Number(caption.dataset.from);
-        const to = INTRO + Number(caption.dataset.to);
+        const from =
+          intro + Number(phone ? caption.dataset.mobileFrom : caption.dataset.from);
+        const to =
+          intro + Number(phone ? caption.dataset.mobileTo : caption.dataset.to);
         const words = caption.querySelectorAll("[data-scene-word]");
         const body = caption.querySelector("[data-scene-body]");
         const edges = Array.from(
@@ -215,7 +221,7 @@ export default function Hero() {
         // The rule draws itself around the words, one edge after the next, like
         // the detection box in the footage closing on what it found. Linear and
         // evenly divided so the trace holds a steady speed through the corners.
-        const lap = IN * 1.3;
+        const lap = arrive * 1.3;
         edges.forEach((edge, i) => {
           const axis = edge.dataset.sceneEdge === "x" ? "scaleX" : "scaleY";
           tl.fromTo(
@@ -239,7 +245,7 @@ export default function Hero() {
             stagger: 0.07,
             ease: "power3.out",
           },
-          from + IN * 0.2
+          from + arrive * 0.2
         );
 
         if (body) {
@@ -253,15 +259,15 @@ export default function Hero() {
               duration: 0.7,
               ease: "power3.out",
             },
-            from + IN * 0.55
+            from + arrive * 0.55
           );
         }
 
         // Out, so the next scene arrives on a clear frame.
         tl.to(
           caption,
-          { autoAlpha: 0, y: -26, duration: OUT, ease: "power2.in" },
-          to - OUT
+          { autoAlpha: 0, y: -26, duration: leave, ease: "power2.in" },
+          to - leave
         );
       });
 
@@ -313,34 +319,42 @@ export default function Hero() {
   }, []);
 
   return (
-    // Tall enough to hold the whole scrubbed run: one screen of stage, ~14vh of
-    // scroll per second of footage, and a closing screen the picture spends
-    // dissolving into the statement while the stage stays stuck behind it.
-    // Phones get a shorter run so the story isn't a marathon of swipes. These
-    // heights are the single source of truth — the timeline measures the
-    // section rather than restating them.
+    // Tall enough to hold the whole scrubbed run: one screen of stage, the
+    // footage, and a closing screen the picture spends dissolving into the
+    // statement while the stage stays stuck behind it.
+    //
+    // The two cuts are nearly the same height for opposite reasons. Desktop
+    // spends 440vh on 28.4s of footage; the phone spends 400vh on 13.6s, which
+    // is close to twice the scroll per second — but its cut has the same five
+    // scenes packed into half the runtime, so scene for scene the two end up
+    // costing about the same to get through. These heights are the single
+    // source of truth: the timeline measures the section rather than restating
+    // them.
     <section
       ref={sectionRef}
-      className="relative h-[640vh] max-md:h-[560vh]"
+      className="relative h-[640vh] max-md:h-[600vh]"
     >
       {/* Stage height is 100vh on every screen, not dvh: the statement card
           pulls itself up by exactly this much, and a dvh stage would drift out
           of step with it every time a phone's URL bar slid away. */}
       <div ref={stageRef} className="sticky top-0 h-screen w-full overflow-hidden">
-        {/* The story itself: 567 AVIF stills at 20fps rather than a video, so
+        {/* The story itself: AVIF stills at 20fps rather than a video, so
             moving through it is a decode and never a seek. `[n]` stands in for
-            the zero-padded frame number. Phones get the same framing at the
-            footage's native width and a leaner bitrate — they magnify a
-            quarter of it across the whole screen, so detail is what they need
-            and spare resolution is worth more to them than spare bits. The
-            poster underneath shows frame one until the canvas has anything to
-            paint. */}
+            the zero-padded frame number. The two cuts are separate edits —
+            567 landscape frames for desktop, 297 portrait ones for phones — so
+            each carries its own count.
+
+            The poster underneath shows frame one until the canvas has anything
+            to paint, and is laid out the way the canvas will draw: cover on
+            desktop, and on phones sat on the bottom edge over the frame's own
+            top tone, so the handover to the canvas is invisible. */}
         <canvas
           ref={canvasRef}
           data-frames={567}
+          data-mobile-frames={273}
           data-src="/assets/Hero/seq/[n].avif"
           data-mobile-src="/assets/Hero/seq-mobile/[n].avif"
-          className="absolute inset-0 h-full w-full bg-[url('/assets/Hero/0819.poster.webp')] bg-cover bg-center max-md:bg-[url('/assets/Hero/0819.poster.mobile.webp')]"
+          className="absolute inset-0 h-full w-full bg-[url('/assets/Hero/0819.poster.webp')] bg-cover bg-center bg-no-repeat max-md:bg-[url('/assets/Hero/hero-mobile.poster.webp')] max-md:bg-[#f9fbfa] max-md:bg-contain max-md:bg-bottom"
           aria-hidden="true"
         />
 
@@ -359,85 +373,87 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Scene captions. Each one names the slice of footage it belongs to,
-            where it sits on the stage, and — on phones — where the viewing
-            window opens on the frame and how far it travels while the shot
-            runs. Hero's timeline reads all of it back off the DOM. */}
+        {/* Scene captions. Each one carries its cue in both cuts and where it
+            sits on the stage in each; Hero's timeline reads all of it back off
+            the DOM.
+
+            The phone cut dissolves between scenes at 2.5 / 5.2 / 8.6 / 11.1s,
+            so its cues sit inside those and clear of the dissolves. It also
+            draws labels of its own — a recording chip, a detection read-out, a
+            map card, a verified badge — hard against the frame's edges, and
+            those are what the phone positions below are keeping clear of. */}
         <div className="absolute inset-0 z-10">
-          {/* Held on the desk, dead centre — the framing the phone already
-              showed, and the only one this scene needs. The desk fills the
-              middle of the frame and the strewn paper runs to the bottom
-              edge, so the caption sits low over the paper rather than in the
-              empty sky above it. */}
+          {/* Desk buried in paper. It sits across the middle of the phone
+              frame, so the caption drops into the lower half and leaves the
+              pile above it to carry the scene. */}
           <SceneCaption
             from={0.2}
             to={3.9}
-            position="top-[26%] left-[14%] w-96 max-md:top-auto max-md:bottom-[9%] max-md:left-1/2 max-md:w-[86vw] max-md:-translate-x-1/2"
-            mobilePan={{ cut: 0, from: 0.5, to: 0.5 }}
+            position="top-[26%] left-[14%] w-96 max-md:top-[60%] max-md:left-1/2 max-md:w-[86vw] max-md:-translate-x-1/2"
+            mobileFrom={0.1}
+            mobileTo={2.25}
             title="بلاغات بلا نظام"
           >
             مكالمات وأوراق ورسائل متفرّقة تتكدّس على مكتب واحد، فيضيع أغلبها قبل
             أن يصل إلى من يملك إصلاح الطريق.
           </SceneCaption>
 
-          {/* Opens hard left on the driver and rides across the cabin to the
-              phone clamped to the windscreen — the shot's own subject, and the
-              one a centred crop cuts in half. The phone's screen spans
-              0.680–0.842 of the frame and its mount a little past both, so
-              0.762 is the middle of it: settle there and the whole prop clears
-              either edge whatever slice the viewport takes. */}
+          {/* Cabin, with the phone clamped to the windscreen. The recording
+              chip rides the top-right corner and the wheel fills the bottom
+              third, so the caption takes the windscreen between them. */}
           <SceneCaption
             from={4.2}
             to={9}
-            position="top-[17%] left-1/2 w-104 -translate-x-1/2 max-md:top-[14%] max-md:w-[86vw]"
-            mobilePan={{ cut: 4.05, from: 0, to: 0.762, span: 0.9 }}
+            position="top-[17%] left-1/2 w-104 -translate-x-1/2 max-md:top-[31%] max-md:w-[86vw]"
+            mobileFrom={2.7}
+            mobileTo={5}
             title="ابدأ بالقيادة فقط"
           >
             ثبّت هاتفك وافتح مسار. لا استمارات ولا بلاغات — رحلتك اليومية نفسها
             تتحوّل إلى مسحٍ مستمر للطريق.
           </SceneCaption>
 
-          {/* Parked over the lane the detections land in. The road rushes at
-              the camera on its own here, so a pan would only fight it. The
-              caption rides high, just under the horizon: everything this scene
-              has to show crosses the lower two thirds. */}
+          {/* The cracks and their read-out cross the middle of the frame and
+              the coordinates run along the bottom, so the caption rides high —
+              on the phone it takes the top of the stage, clear of both. */}
           <SceneCaption
             from={9.3}
             to={17}
-            position="top-1/2 left-[6%] w-96 -translate-y-1/2 max-md:top-[15%] max-md:left-1/2 max-md:w-[86vw] max-md:-translate-x-1/2 max-md:translate-y-0"
-            mobilePan={{ cut: 9.15, from: 0.625, to: 0.625 }}
+            position="top-1/2 left-[6%] w-96 -translate-y-1/2 max-md:top-[18%] max-md:left-1/2 max-md:w-[86vw] max-md:-translate-x-1/2 max-md:translate-y-0"
+            mobileFrom={5.45}
+            mobileTo={8.25}
             title="الكاميرا ترى ما يفوت العين"
           >
             يرصد الذكاء الاصطناعي كل حفرة وشقّ أثناء المرور، ويسجّل موقعه وحجمه
             ودرجة خطورته لحظة بلحظة.
           </SceneCaption>
 
-          {/* Starts behind the inspector's head and travels the width of the
-              monitor, arriving on the pinned report and the pothole photo
-              beside it just as the map zooms in. */}
+          {/* Over the operator's shoulder at the dashboard. The map card
+              hangs in the upper half of the phone frame and the operator fills
+              the lower one, so on desktop the caption sits low on the
+              shoulder, and on the phone it rides the very top of the stage,
+              above the card. */}
           <SceneCaption
             from={17.3}
             to={23}
-            position="top-[63%] left-1/2 w-104 -translate-x-1/2 max-md:top-auto max-md:bottom-[10%] max-md:w-[86vw]"
-            mobilePan={{ cut: 17.2, from: 0.16, to: 0.685, span: 0.9 }}
+            position="top-[63%] left-1/2 w-104 -translate-x-1/2 max-md:top-[4%] max-md:w-[86vw]"
+            mobileFrom={8.9}
+            mobileTo={10.75}
             title="خريطة واحدة تُرتّب الأولويات"
           >
             تصل كل الأضرار إلى لوحة تحكّم واحدة، مصنّفة حسب الخطورة ومرتّبة في
             خطة عمل توجّه الفرق إلى الأهم أولًا.
           </SceneCaption>
 
-          {/* Leaves the inspector for the pothole inside the first third of
-              the shot — the hole seals over a second and a half in, so the
-              window has to be there to catch it — then holds for the tick.
-              That pins the caption to the middle of the phone's screen rather
-              than an edge: the pothole sits in the bottom sixth of the frame
-              and the tick lands in the top third, and this is the empty
-              stretch of road between them. */}
+          {/* The inspector standing over the sealed hole, verified badge at
+              his feet. He runs from the upper third to the bottom of the phone
+              frame, so the caption takes the sky above his head. */}
           <SceneCaption
             from={23.3}
             to={28.36}
-            position="top-1/2 right-[7%] w-96 -translate-y-1/2 max-md:top-[44%] max-md:right-auto max-md:left-1/2 max-md:w-[86vw] max-md:-translate-x-1/2 max-md:translate-y-0"
-            mobilePan={{ cut: 23.25, from: 0.325, to: 0.605, span: 0.32 }}
+            position="top-1/2 right-[7%] w-96 -translate-y-1/2 max-md:top-[11%] max-md:right-auto max-md:left-1/2 max-md:w-[86vw] max-md:-translate-x-1/2 max-md:translate-y-0"
+            mobileFrom={11.45}
+            mobileTo={13.6}
             title="إصلاحٌ موثَّق بالدليل"
           >
             يوثّق الفريق العمل من الميدان بصورة قبل وبعد، فيُغلق البلاغ بدليل

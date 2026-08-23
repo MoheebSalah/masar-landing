@@ -20,6 +20,21 @@
  * bytes (a few KB each), so the whole sequence costs about as much memory as
  * one bitmap plus its downloads.
  */
+
+/**
+ * How the frame meets a canvas that isn't its shape.
+ *
+ * - `cover` fills the canvas and lets whatever overflows fall off the edges.
+ *   Right for the desktop cut, which is wider than any window it lands in.
+ * - `fit-bottom` matches the frame's width to the canvas', sits it on the
+ *   bottom edge, and carries the frame's own top row up through the gap left
+ *   above. Right for the phone cut: it is composed 9:16 with labels and
+ *   framing marks hard against all four edges, so cropping it to a taller
+ *   screen clips type, and its top row is a single flat tone in every scene —
+ *   stretch it and the join is invisible.
+ */
+export type FrameFit = "cover" | "fit-bottom";
+
 export default class FrameSequence {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
@@ -40,12 +55,18 @@ export default class FrameSequence {
 
   /** How far past 1 the backing store may go. */
   private readonly maxDensity: number;
-  /** Null means "cover the canvas with the whole frame" — the desktop case. */
-  private pan: number | null = null;
+  /** Fixed for the sequence's life — it follows the cut, not the scroll. */
+  private readonly fit: FrameFit;
 
-  constructor(canvas: HTMLCanvasElement, urls: string[], maxDensity = 2) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    urls: string[],
+    maxDensity = 2,
+    fit: FrameFit = "cover"
+  ) {
     this.canvas = canvas;
     this.maxDensity = maxDensity;
+    this.fit = fit;
     // Alpha stays on so the canvas is transparent until the first frame is
     // decoded, letting the poster behind it show through. Opting out would
     // paint it opaque black from the start — a flash before frame one lands.
@@ -98,27 +119,6 @@ export default class FrameSequence {
     if (clamped === this.targetIndex) return;
     this.targetIndex = clamped;
     this.pump();
-  }
-
-   /**
-   * Slide the viewing window across the frame. The window is always the full
-   * height of the footage, so how much of its width fits follows from the
-   * canvas' own shape — on a portrait phone that's about a quarter of it.
-   *
-   * `pan` names the point of the frame to centre that window on, as a fraction
-   * of the frame's width, and it is clamped so the window never runs off
-   * either end (0 therefore means "hard left", 1 "hard right"). Naming a point
-   * rather than a distance travelled is what makes one number safe on every
-   * screen: a taller, narrower viewport takes a narrower slice, and a window
-   * anchored to a *subject* stays on it while a window anchored to a fraction
-   * of the total travel slides off. Pass null to go back to covering the
-   * canvas with the whole frame — the desktop case. Safe to call every scroll
-   * frame.
-   */
-  setPan(pan: number | null) {
-    if (pan === this.pan) return;
-    this.pan = pan;
-    this.paint();
   }
 
   /** Match the backing store to the box, then repaint what's on screen. */
@@ -184,33 +184,38 @@ export default class FrameSequence {
       });
   }
 
-  /** Draw the held frame, either centred or through the panning window. */
+  /** Draw the held frame the way this cut asks to meet the canvas. */
   private paint() {
     const bitmap = this.current;
     if (!bitmap) return;
     const { width, height } = this.canvas;
 
-    if (this.pan === null) {
+    const cover = () => {
       const scale = Math.max(width / bitmap.width, height / bitmap.height);
       const w = bitmap.width * scale;
       const h = bitmap.height * scale;
       this.ctx.drawImage(bitmap, (width - w) / 2, (height - h) / 2, w, h);
+    };
+
+    if (this.fit === "cover") {
+      cover();
       return;
     }
 
-    // The slice the canvas can hold at the frame's full height. `min` covers
-    // the screen too wide to need one — there the whole frame goes in, the
-    // height is trimmed instead, and the pan has nowhere left to travel.
-    const aspect = width / height;
-    const sw = Math.min(aspect * bitmap.height, bitmap.width);
-    const sh = sw / aspect;
-    const half = sw / 2;
-    const centre = Math.min(
-      Math.max(this.pan * bitmap.width, half),
-      bitmap.width - half
-    );
-    const sx = centre - half;
-    const sy = (bitmap.height - sh) / 2;
-    this.ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, width, height);
+    const h = (bitmap.height * width) / bitmap.width;
+    // A viewport wider than the frame's own shape: matching widths already
+    // overflows the height, which is just cover — and dropping all of that
+    // overflow off one edge would be worse than splitting it.
+    if (h >= height) {
+      cover();
+      return;
+    }
+
+    // The frame sits on the bottom edge and its top row is stretched up
+    // through what's left. One pixel of overlap so no rounding can leave a
+    // hairline of bare canvas along the join.
+    const gap = height - h;
+    this.ctx.drawImage(bitmap, 0, 0, bitmap.width, 1, 0, 0, width, gap + 1);
+    this.ctx.drawImage(bitmap, 0, gap, width, h);
   }
 }

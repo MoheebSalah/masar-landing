@@ -6,32 +6,13 @@ type SceneCaptionProps = {
   /** Where the card sits over the footage — absolute-position utilities. */
   position: string;
   /**
-   * How the footage is framed on phones, where the frame runs full-bleed at
-   * its own full height — far wider than a portrait screen can hold, so only
-   * a slice of it fits and the rest is reached by sliding that window
-   * sideways as the page scrolls. Desktop ignores this and fills the canvas.
-   *
-   * `cut` is the footage second this scene's shot begins at, taken from the
-   * cuts in the clip itself: the window jumps to `from` there, which nothing
-   * can be seen to do because the picture changes completely on the same
-   * frame. It then travels to `to` over `span` of the shot, holding still for
-   * whatever is left. A scene that shouldn't move at all gives the same
-   * number twice.
-   *
-   * `from` and `to` are points on the frame — the fraction of its width the
-   * window centres on, clamped so it never runs off an end, which makes 0
-   * "hard left" and 1 "hard right". Write them as the thing being looked at,
-   * not as how far along the pan has got: how wide a slice fits depends on the
-   * viewport's shape, so a taller phone (or a browser whose URL bar has just
-   * slid away) takes a narrower one, and only a window anchored to the subject
-   * keeps it in shot on all of them.
+   * The same two cues for the phone cut, which is a different edit of the same
+   * story — portrait, and half the length — so its scenes fall in completely
+   * different places. Hero picks one pair or the other once, at the top of its
+   * timeline, and never branches again.
    */
-  mobilePan: {
-    cut: number;
-    from: number;
-    to: number;
-    span?: number;
-  };
+  mobileFrom: number;
+  mobileTo: number;
   /** Headline. Split into words so each one can shade in on its own. */
   title: string;
   /** The scene's supporting line. */
@@ -54,7 +35,8 @@ export default function SceneCaption({
   from,
   to,
   position,
-  mobilePan,
+  mobileFrom,
+  mobileTo,
   title,
   children,
 }: SceneCaptionProps) {
@@ -64,7 +46,8 @@ export default function SceneCaption({
         data-scene
         data-from={from}
         data-to={to}
-        data-mobile-pan={JSON.stringify(mobilePan)}
+        data-mobile-from={mobileFrom}
+        data-mobile-to={mobileTo}
         className="relative"
       >
         {/* A thin primary rule around the words — the same shape the footage
@@ -80,7 +63,7 @@ export default function SceneCaption({
             once round from the top-right. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -inset-x-6 -inset-y-5 max-md:-inset-4"
+          className="pointer-events-none absolute -inset-x-6 -inset-y-5 max-md:-inset-3.5"
         >
           <span
             data-scene-edge="x"
@@ -103,7 +86,7 @@ export default function SceneCaption({
         {/* A wrapping flex row so every word is its own box and the gap keeps
             the spacing even — an inline-block run would swallow the whitespace
             between the spans. */}
-        <h2 className="relative flex flex-wrap gap-x-[0.28em] font-heading text-h2 leading-tight text-text max-md:text-h3">
+        <h2 className="relative flex flex-wrap gap-x-[0.28em] font-heading text-h2 leading-tight text-text max-md:text-t1">
           {title.split(" ").map((word, i) => (
             <span key={`${word}-${i}`} data-scene-word>
               {word}
@@ -117,7 +100,7 @@ export default function SceneCaption({
             all but disappears. The hierarchy comes from size and face instead. */}
         <p
           data-scene-body
-          className="relative mt-4 font-sans text-t2 leading-relaxed text-text max-md:text-t3"
+          className="relative mt-4 font-sans text-t2 leading-relaxed text-text max-md:mt-2.5 max-md:text-t4"
         >
           {children}
         </p>

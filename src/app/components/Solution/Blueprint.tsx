@@ -4,8 +4,13 @@
 // so the drawing feels continuous rather than starting all at once.
 export default function Blueprint() {
   return (
+    // The mask dissolves the line art over the section's bottom third. Below
+    // this sits Workflow, on the same #0E1312 with no line art of its own, and
+    // without it the strokes stop dead along the seam. Unprefixed only — pairing
+    // it with -webkit-mask-image makes the minifier collapse the two and drop
+    // the standard property modern browsers actually read.
     <svg
-      className="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-20"
+      className="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-20 [mask-image:linear-gradient(to_bottom,#000_62%,transparent_100%)]"
       viewBox="0 0 1440 900"
       fill="none"
       preserveAspectRatio="xMidYMid slice"
