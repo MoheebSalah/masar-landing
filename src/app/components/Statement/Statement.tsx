@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Blueprint from "./Blueprint";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -31,10 +32,10 @@ export default function Statement() {
       // the unit every phase below is counted in.
       const screen = () => panel.offsetHeight;
 
-      // One screen to arrive, and that is the whole of it. The panel is stuck
-      // to the top while it fades up over the hero's last frame, holds for a
-      // second screen, and then simply scrolls away with the page — Solution
-      // rises into the gap it leaves behind, the way any two sections meet.
+      // One screen to arrive, and that is the whole of it — its length is not
+      // free, it has to match the hero's fade-out exactly for the two crossing
+      // fades to hand over evenly. Half a screen of stillness follows so the
+      // line can be read, and then the leaving fade below takes over.
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
@@ -49,6 +50,20 @@ export default function Statement() {
       // eased ones dip through a pale patch in the middle.
       tl.fromTo(
         panel,
+        { autoAlpha: 0 },
+        { autoAlpha: 1, duration: 1, ease: "none" },
+        0
+      );
+
+      // The blueprint backdrop arrives with the panel. It is fixed to the
+      // viewport, so from here until the end of the Solution scene it never
+      // moves again — the frames climb over shapes that are already standing
+      // still, which is the only way that climb reads as a picture rising
+      // rather than a whole background sliding up behind it. Its own fade
+      // multiplies with the panel's, so the lines surface a little later than
+      // the cream does: they settle in behind the line of text, never race it.
+      tl.fromTo(
+        "#statement-blueprint",
         { autoAlpha: 0 },
         { autoAlpha: 1, duration: 1, ease: "none" },
         0
@@ -80,33 +95,67 @@ export default function Statement() {
         stagger: 0.09,
         ease: "power3.out",
       });
+
+      // Leaving. The panel does not move and the page does not carry it off:
+      // the words dissolve on the spot, over the one screen of scroll that
+      // Solution spends climbing into the viewport from below. The two are cut
+      // from the same geometry — Solution is pulled up by exactly one screen
+      // (`mt-[-100vh]`), so it leaves the bottom edge as this fade starts and
+      // lands filling the screen, its frame centred, as the fade finishes.
+      //
+      // The heading fades and not the panel: the panel's background is the
+      // page's own and has to stay opaque behind the line to the very end, and
+      // its opacity already belongs to the arrival above.
+      gsap.to(heading, {
+        autoAlpha: 0,
+        ease: "none",
+        scrollTrigger: {
+          trigger: section,
+          start: () => `top top-=${screen() * 1.5}`,
+          end: () => `top top-=${screen() * 2.5}`,
+          scrub: 0.6,
+          invalidateOnRefresh: true,
+        },
+      });
     }, section);
 
     return () => ctx.revert();
   }, []);
 
   return (
-    // The first two of its three screens overlap the hero (-200vh), where the
-    // panel is stuck to the top and fades up over the footage's last frame. The
-    // third is the section's own: the panel comes unstuck at the end of its
-    // sticky run and scrolls off the top under its own steam, with Solution
-    // rising behind it. The top margin is tied to the hero's `* 2` reserve —
-    // the footage lands on its final frame exactly two stage-heights before the
-    // hero ends, which is where this panel's sticky begins.
+    // Three and a half screens, the first two overlapping the hero (-200vh).
+    // They divide as fade-in / hold / fade-out / handover: one screen stuck to
+    // the top fading up over the footage's last frame, half a screen of
+    // stillness so the line can be read, one screen dissolving that line away
+    // where it stands while Solution climbs over the panel from the bottom of
+    // the screen, and a last screen after the sticky releases — by then
+    // Solution is pinned and filling the viewport, so the panel sliding away
+    // behind it is never seen. The panel itself never moves at any point in
+    // that; the only thing travelling is the section arriving in front of it.
+    //
+    // The hold is only half a screen on purpose: a whole one was a full screen
+    // of scrolling spent on a motionless, fully-opaque panel. The top margin is
+    // tied to the hero's `* 2` reserve — the footage lands on its final frame
+    // exactly two stage-heights before the hero ends, which is where this
+    // sticky begins.
     <section
       id="statement"
       ref={sectionRef}
-      className="relative z-10 mt-[-200vh] h-[300vh] w-full"
+      className="relative z-10 mt-[-200vh] h-[350vh] w-full"
     >
       <div
         ref={panelRef}
         className="sticky top-0 flex h-screen w-full flex-col items-center justify-center bg-background px-8"
       >
+        {/* Construction line art, behind the line of text — and behind
+            everything the section after this one brings with it */}
+        <Blueprint />
+
         {/* Sets up the line the Solution section answers with — "مسار يغلق هذه
             الفجوة". Each word is its own span so the reveal can stagger them. */}
         <h2
           ref={headingRef}
-          className="max-w-6xl text-center font-heading text-[2.5rem] leading-tight text-text md:text-[4.5rem] lg:text-[5.5rem]"
+          className="relative z-10 max-w-6xl text-center font-heading text-[2.5rem] leading-tight text-text md:text-[4.5rem] lg:text-[5.5rem]"
         >
           <span className="flex flex-wrap justify-center gap-x-[0.3em]">
             <span>بين</span>

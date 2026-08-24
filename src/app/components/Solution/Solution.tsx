@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Blueprint from "./Blueprint";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -40,6 +39,14 @@ export default function Solution() {
       if (section.dataset.dark !== dark) section.dataset.dark = dark;
     };
 
+    // The blueprint backdrop is the statement's, fixed to the viewport and
+    // already standing still by the time this section starts climbing over it.
+    // It is faded out from here rather than from there because only this scene
+    // knows when it is finished with: the dark fill above has covered it since
+    // the flip, and it has to be gone before the pin releases or a fixed layer
+    // would go on floating over Workflow.
+    const backdrop = document.getElementById("statement-blueprint");
+
     const mm = gsap.matchMedia();
 
     // Desktop: the two halves converge into a single line over three
@@ -55,34 +62,45 @@ export default function Solution() {
       gsap.set(rightRef.current, { x: offset });
       gsap.set(leftRef.current, { x: -offset });
 
-      // Entrance: as the section scrolls into view, the first frame fades up
-      // and each sentence half slides in from its own edge — the right half
-      // travels in from the right, the left half from the left — then settles.
-      // The slide lives on the wrapper spans so it composes cleanly with the
-      // scrubbed convergence that the inner spans (rightRef/leftRef) drive.
+      // Entrance, in two beats, because the section climbs over the statement
+      // now rather than following it. The frame comes up first, the instant the
+      // section's top crosses the bottom of the screen — which is where the
+      // climb begins — so the picture is there for the whole of it and is what
+      // the statement's line dissolves into. The sentence waits until the climb
+      // is all but over: it answers that line, so the two must never be
+      // legible at the same time.
+      //
+      // Each half slides in from its own edge — the right half from the right,
+      // the left half from the left — then settles. The slide lives on the
+      // wrapper spans so it composes cleanly with the scrubbed convergence that
+      // the inner spans (rightRef/leftRef) drive.
       const slideIn = window.innerWidth * 0.35;
       gsap.set(frames[0], { autoAlpha: 0 });
       gsap.set(rightSlideRef.current, { autoAlpha: 0, x: slideIn });
       gsap.set(leftSlideRef.current, { autoAlpha: 0, x: -slideIn });
       ScrollTrigger.create({
         trigger: section,
-        start: "top 70%",
+        start: "top bottom",
         once: true,
-        onEnter: () => {
-          gsap.to(frames[0], { autoAlpha: 1, duration: 0.9, ease: "power2.out" });
+        onEnter: () =>
+          gsap.to(frames[0], { autoAlpha: 1, duration: 0.9, ease: "power2.out" }),
+      });
+      ScrollTrigger.create({
+        trigger: section,
+        start: "top 15%",
+        once: true,
+        onEnter: () =>
           gsap.to([rightSlideRef.current, leftSlideRef.current], {
             autoAlpha: 1,
             x: 0,
             duration: 1,
             ease: "power3.out",
-          });
-        },
+          }),
       });
 
-      // The scene's own length. The section now scrolls up into place like any
-      // other — the statement panel is gone off the top before the pin engages
-      // — so there is nothing to wait behind and the scene starts on the frame
-      // it pins.
+      // The scene's own length. The pin engages the moment the climb ends, on
+      // the frame the section lands on, so the scene starts where the handover
+      // finishes with nothing in between.
       const SCENE = 4;
 
       // The point in the pinned scroll where the section swaps to dark: just as
@@ -124,6 +142,18 @@ export default function Solution() {
         );
       });
 
+      // The statement's line art leaves with the scene. It has been out of
+      // sight behind the dark fill since the flip, so the fade costs nothing to
+      // look at — it is there to take a fixed layer off the page before the pin
+      // releases and Workflow arrives underneath it.
+      if (backdrop) {
+        tl.to(
+          backdrop,
+          { autoAlpha: 0, ease: "none", duration: 0.35 },
+          SCENE - 0.35
+        );
+      }
+
       return () => {
         section.dataset.dark = "false";
       };
@@ -149,17 +179,18 @@ export default function Solution() {
       gsap.set(rightRef.current, { x: offset, autoAlpha: 0 });
       gsap.set(leftRef.current, { x: -offset, autoAlpha: 0 });
 
-      // The first frame fades up as the section arrives.
+      // The first frame fades up as the section leaves the bottom of the screen
+      // and starts its climb over the statement, as on desktop.
       ScrollTrigger.create({
         trigger: section,
-        start: "top 70%",
+        start: "top bottom",
         once: true,
         onEnter: () =>
           gsap.to(frames[0], { autoAlpha: 1, duration: 0.9, ease: "power2.out" }),
       });
 
-      // As on desktop, the scene starts on the frame the section pins — the
-      // statement above it scrolls away under its own steam now.
+      // As on desktop, the scene starts on the frame the section pins — which
+      // is the frame the climb over the statement ends on.
       const SCENE = 3;
 
       // Halfway through the pinned scroll — the lines are still travelling, so
@@ -210,6 +241,15 @@ export default function Solution() {
         );
       });
 
+      // As on desktop, the line art is taken off the page with the scene.
+      if (backdrop) {
+        tl.to(
+          backdrop,
+          { autoAlpha: 0, ease: "none", duration: 0.35 },
+          SCENE - 0.35
+        );
+      }
+
       return () => {
         section.dataset.dark = "false";
       };
@@ -219,11 +259,28 @@ export default function Solution() {
   }, []);
 
   return (
+    // Pulled up by one screen so it overlaps the statement's last one: the
+    // section climbs from the bottom edge of the screen to filling it while the
+    // statement's line dissolves in place above, and lands with its frame
+    // centred exactly as that line finishes going. `z-20` is what makes the
+    // climb visible at all — the statement panel is `z-10` and stays opaque, so
+    // without it this would arrive underneath.
+    //
+    // No background of its own, deliberately: an opaque fill here would climb
+    // with the section and wipe the statement's fixed line art up the screen
+    // along with it, which is the one thing that must not travel. What shows
+    // through is the statement's panel — the same cream, so the rising edge
+    // stays invisible — with the blueprint standing still on top of it, and the
+    // only thing seen to move is the picture. The dark fill below is this
+    // section's own and does travel with it, which is what keeps the whole
+    // screen dark as the section finally scrolls up into Workflow. The pin
+    // keeps the arrangement: ScrollTrigger hands the margin to the spacer it
+    // wraps this in.
     <section
       ref={sectionRef}
       id="solution"
       data-dark="false"
-      className="group relative h-screen w-full overflow-hidden bg-background"
+      className="group relative z-20 mt-[-100vh] h-screen w-full overflow-hidden"
     >
       {/* The dark backdrop, faded in at the flip point. Fading a layer's
           opacity is composited on the GPU, so the swap costs no repaint of the
@@ -232,9 +289,6 @@ export default function Solution() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 bg-dark opacity-0 transition-opacity duration-700 ease-out group-data-[dark=true]:opacity-100"
       />
-
-      {/* Animated construction blueprint behind everything */}
-      <Blueprint />
 
       {/* Frame stack — centered block of street */}
       {FRAMES.map((src, i) => (

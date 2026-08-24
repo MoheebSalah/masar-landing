@@ -18,6 +18,7 @@ const SLIDE_DURATION = 0.55;
 export default function MapMobile() {
   const panelRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const busyRef = useRef(false);
   // The map plays its zoom-in intro the first time the panel is opened.
   const introRequestedRef = useRef(false);
@@ -25,6 +26,10 @@ export default function MapMobile() {
   // never drops the visitor to a different spot on the page.
   const scrollYRef = useRef(0);
   const [open, setOpen] = useState(false);
+  // The map document is only fetched once the section is nearly in view — but
+  // well before the tap, so the map is already booted and its tiles cached when
+  // the panel slides in.
+  const [warm, setWarm] = useState(false);
 
   const post = (msg: Record<string, unknown>) =>
     iframeRef.current?.contentWindow?.postMessage(msg, "*");
@@ -42,6 +47,27 @@ export default function MapMobile() {
     }
     style.textContent = "";
   };
+
+  // Preload: start fetching the map document as soon as the button is within a
+  // screen and a half of the viewport. The panel is visibility:hidden (not
+  // display:none) at rest, so the iframe still gets its real full-screen size —
+  // MapLibre boots and pulls its tiles at the size it will actually be shown at,
+  // and opening the panel is then instant instead of a cold 1.4 MB load.
+  useEffect(() => {
+    const button = buttonRef.current;
+    if (!button || warm) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setWarm(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "150% 0px" },
+    );
+    io.observe(button);
+    return () => io.disconnect();
+  }, [warm]);
 
   // If the map only finishes booting after we've asked it to play, replay once
   // it announces itself (mirrors the desktop handshake).
@@ -67,10 +93,12 @@ export default function MapMobile() {
     [],
   );
 
-  // Slide the full-screen map in from the right. The panel is display:none at
-  // rest, so it never adds page height or a stray horizontal scrollbar; opening
-  // reveals it, parks it one screen to the right (xPercent 100) and eases it to
-  // 0. Scroll is locked and the page is overflow-clipped for the duration, so
+  // Slide the full-screen map in from the right. At rest the panel sits over the
+  // page but visibility:hidden — untouchable, unpainted and out of the tab order,
+  // while still giving the preloaded map its real size. It never adds page height
+  // or a stray horizontal scrollbar; opening reveals it, parks it one screen to
+  // the right (xPercent 100) and eases it to 0. Scroll is locked and the page is
+  // overflow-clipped for the duration, so
   // the off-screen panel can't scroll the page sideways mid-slide. In this RTL
   // document GSAP's transform is still physical, so xPercent 100 is always "one
   // screen to the right".
@@ -83,6 +111,7 @@ export default function MapMobile() {
     getLenis()?.stop();
     document.documentElement.style.overflowX = "clip";
     setOpen(true);
+    setWarm(true);
     showControls();
 
     // Play the zoom-in intro the first time the map is revealed.
@@ -91,7 +120,7 @@ export default function MapMobile() {
       post({ type: "masar-play" });
     }
 
-    gsap.set(panel, { display: "block", xPercent: 100 });
+    gsap.set(panel, { visibility: "visible", xPercent: 100 });
     gsap.to(panel, {
       xPercent: 0,
       duration: SLIDE_DURATION,
@@ -121,7 +150,7 @@ export default function MapMobile() {
       duration: SLIDE_DURATION,
       ease: "power3.in",
       onComplete: () => {
-        gsap.set(panel, { display: "none", clearProps: "transform" });
+        gsap.set(panel, { visibility: "hidden", clearProps: "transform" });
         document.documentElement.style.overflowX = "";
         setOpen(false);
         lenis?.start();
@@ -144,6 +173,7 @@ export default function MapMobile() {
     <>
       {/* The tap target: a glowing primary button that opens the map. */}
       <button
+        ref={buttonRef}
         type="button"
         onClick={openPanel}
         aria-label="افتح الخريطة التفاعلية"
@@ -155,24 +185,25 @@ export default function MapMobile() {
         </span>
       </button>
 
-      {/* Full-screen map panel — display:none at rest, slid in on open. */}
+      {/* Full-screen map panel — visibility:hidden at rest, slid in on open. */}
       <div
         ref={panelRef}
         aria-hidden={!open}
-        className="fixed inset-0 z-[100] hidden bg-background"
+        className="invisible fixed inset-0 z-[100] bg-background"
       >
-        {/* Deferred: the map (a ~1.4 MB document + its tiles) isn't fetched on
-            page load. The panel is display:none at rest, so loading="lazy" holds
-            the iframe until it's first shown (on open) rather than loading it
-            hidden behind the whole page — the map is a tap away, not an
-            upfront cost on every mobile visit. */}
-        <iframe
-          ref={iframeRef}
-          src="/masar-map.html"
-          title="خريطة مسار للحُفر في الخليل"
-          loading="lazy"
-          className="h-full w-full border-0"
-        />
+        {/* Warmed, not deferred: the map (a ~1.4 MB document + its tiles) still
+            isn't fetched on page load, but the src is attached as soon as the
+            section nears the viewport, so the map is booted and its tiles are in
+            cache by the time the button is tapped — no cold wait behind the
+            slide-in. */}
+        {warm && (
+          <iframe
+            ref={iframeRef}
+            src="/masar-map.html"
+            title="خريطة مسار للحُفر في الخليل"
+            className="h-full w-full border-0"
+          />
+        )}
 
         <button
           type="button"

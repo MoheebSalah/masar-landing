@@ -154,11 +154,12 @@ export default function Map() {
     };
     window.addEventListener("message", onMessage);
 
-    // Hold the intro until the whole map window is on screen — fire the moment
-    // the frame's bottom border reaches the bottom of the viewport.
+    // Fire the intro while the map window is still arriving — its bottom edge
+    // still 20vh below the fold — so the zoom-in is already under way by the
+    // time the frame lands, instead of starting only once it's fully on screen.
     const st = ScrollTrigger.create({
       trigger: frame,
-      start: "bottom bottom",
+      start: "bottom 120%",
       onEnter: play,
       onEnterBack: play,
     });
@@ -190,7 +191,7 @@ export default function Map() {
       gsap.set(frame, { autoAlpha: 0, y: 60, scale: 0.94 });
 
       const top = gsap.timeline({
-        scrollTrigger: { trigger: section, start: "top 72%", once: true },
+        scrollTrigger: { trigger: section, start: "top 85%", once: true },
       });
       top
         .to(headingEls, {
@@ -208,7 +209,7 @@ export default function Map() {
         scale: 1,
         duration: 0.9,
         ease: "power3.out",
-        scrollTrigger: { trigger: stage, start: "top 82%", once: true },
+        scrollTrigger: { trigger: stage, start: "top 92%", once: true },
       });
     }, section);
 
