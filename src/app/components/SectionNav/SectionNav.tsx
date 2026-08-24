@@ -9,7 +9,7 @@ import { getLenis } from "../SmoothScroll/lenisInstance";
  * entry matches, which is what drives the rail to hide there.
  */
 const SECTIONS = [
-  { id: "problem", label: "المشكلة" },
+  { id: "statement", label: "التحدي" },
   { id: "solution", label: "الحل" },
   { id: "workflow", label: "آلية العمل" },
   { id: "see-in-action", label: "أثناء العمل" },
@@ -56,7 +56,7 @@ export default function SectionNav() {
       const centre = window.innerHeight / 2;
 
       // The active section is the one covering the vertical centre of the
-      // viewport. Tall pinned sections (Problem, Impact) stay "current" for
+      // viewport. Tall pinned sections (Impact, the hero run) stay "current" for
       // their whole pin, which is exactly what we want.
       let next = -1;
       for (let i = 0; i < els.length; i++) {

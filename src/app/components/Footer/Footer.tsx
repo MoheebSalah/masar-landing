@@ -3,13 +3,9 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import {
-  ArrowUpIcon,
-  FacebookIcon,
-  InstagramIcon,
-  LinkedInIcon,
-  XIcon,
-} from "./Icons";
+import { ArrowUpIcon } from "./Icons";
+import RollLink from "../RollText/RollLink";
+import RollText from "../RollText/RollText";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -85,17 +81,26 @@ export default function Footer() {
          bottom the overlapping CTA scrolls fully off-screen and the footer shows
          clean — while mid-scroll the overlap still lets the CTA's rounded corners
          reveal the primary beneath. */
-      className="relative h-[calc(100vh+2rem)] [clip-path:inset(0)]"
+      className="relative h-[calc(100svh+2rem)] [clip-path:inset(0)]"
     >
-      <footer className="fixed inset-x-0 bottom-0 h-screen overflow-hidden bg-primary px-6 pt-14 text-white md:px-32 md:pt-16">
+      <footer className="fixed inset-x-0 bottom-0 h-svh overflow-hidden bg-primary px-6 pt-14 text-white md:px-32 md:pt-16">
         {/* Giant brand mark rising from behind the bottom edge — nearly as
-            wide as the screen. Anchored by its TOP at a viewport-relative
-            height so it starts below the content on any screen, while its
-            base always runs past the bottom edge and gets clipped. Each
-            arrow is animated on its own for the staircase reveal. */}
+            wide as the screen. Anchored by its TOP so its base always runs
+            past the bottom edge and gets clipped. Each arrow is animated on
+            its own for the staircase reveal.
+
+            The anchor is `max()` of a viewport share and a fixed length
+            because the column above it does not scale: heading, links,
+            socials and the back-to-top row come to a fixed 609px whatever the
+            screen height is. 70svh clears that on a tall phone and is what
+            sets the spacing there, but on a short one — a 667px screen, or any
+            phone once `svh` stopped over-reporting the height — it resolves
+            underneath the content and the mark collides with the back-to-top
+            link. The 40rem floor is that content height plus a little air,
+            so the mark parks just below it instead. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-[70vh] flex justify-center md:top-[41vh]"
+          className="pointer-events-none absolute inset-x-0 top-[max(70svh,40rem)] flex justify-center md:top-[41svh]"
         >
           <svg
             className="footer-mark h-auto w-[160vw] shrink-0 md:w-[94vw]"
@@ -135,29 +140,19 @@ export default function Footer() {
                   <h3 className="text-t4 font-bold text-white/70">تصفّح</h3>
                   <ul className="mt-5 space-y-3 text-t4">
                     <li>
-                      <a href="#problem" className="transition-opacity duration-300 hover:opacity-70">
-                        المشكلة
-                      </a>
+                      <RollLink href="#statement">التحدي</RollLink>
                     </li>
                     <li>
-                      <a href="#solution" className="transition-opacity duration-300 hover:opacity-70">
-                        الحل
-                      </a>
+                      <RollLink href="#solution">الحل</RollLink>
                     </li>
                     <li>
-                      <a href="#workflow" className="transition-opacity duration-300 hover:opacity-70">
-                        آلية العمل
-                      </a>
+                      <RollLink href="#workflow">آلية العمل</RollLink>
                     </li>
                     <li>
-                      <a href="#capabilities" className="transition-opacity duration-300 hover:opacity-70">
-                        الإمكانات
-                      </a>
+                      <RollLink href="#capabilities">الإمكانات</RollLink>
                     </li>
                     <li>
-                      <a href="#see-in-action" className="transition-opacity duration-300 hover:opacity-70">
-                        شاهد التجربة
-                      </a>
+                      <RollLink href="#see-in-action">شاهد التجربة</RollLink>
                     </li>
                   </ul>
                 </nav>
@@ -166,59 +161,15 @@ export default function Footer() {
                   <h3 className="text-t4 font-bold text-white/70">تواصل معنا</h3>
                   <ul className="mt-5 space-y-3 text-t4">
                     <li>
-                      <a href="mailto:info@masar.ps" className="transition-opacity duration-300 hover:opacity-70">
-                        info@masar.ps
-                      </a>
+                      <RollLink href="mailto:info@ai-masar.com">info@ai-masar.com</RollLink>
                     </li>
                     <li>
-                      <a href="tel:+97022954410" dir="ltr" className="transition-opacity duration-300 hover:opacity-70">
-                        +970 2 295 4410
-                      </a>
+                      <RollLink href="tel:+970599886917" dir="ltr">
+                        +970 599 886 917
+                      </RollLink>
                     </li>
-                    <li>رام الله، الضفة الغربية، فلسطين</li>
+                    <li>فلسطين، الخليل</li>
                   </ul>
-                </div>
-
-                <div>
-                  <h3 className="text-t4 font-bold text-white/70">تابعنا</h3>
-                  <div className="mt-5 flex items-center gap-6">
-                    <a
-                      href="https://www.linkedin.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="لينكدإن"
-                      className="transition-opacity duration-300 hover:opacity-70"
-                    >
-                      <LinkedInIcon className="h-6 w-6" />
-                    </a>
-                    <a
-                      href="https://x.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="إكس"
-                      className="transition-opacity duration-300 hover:opacity-70"
-                    >
-                      <XIcon className="h-6 w-6" />
-                    </a>
-                    <a
-                      href="https://www.instagram.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="إنستغرام"
-                      className="transition-opacity duration-300 hover:opacity-70"
-                    >
-                      <InstagramIcon className="h-6 w-6" />
-                    </a>
-                    <a
-                      href="https://www.facebook.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="فيسبوك"
-                      className="transition-opacity duration-300 hover:opacity-70"
-                    >
-                      <FacebookIcon className="h-6 w-6" />
-                    </a>
-                  </div>
                 </div>
               </div>
 
@@ -233,19 +184,17 @@ export default function Footer() {
                       the "back to top" control below. */}
                   <p className="max-md:hidden">© 2026 مسار. جميع الحقوق محفوظة.</p>
                   <div className="flex items-center gap-5 max-md:hidden">
-                    <a href="#" className="transition-opacity duration-300 hover:opacity-70">
-                      سياسة الخصوصية
-                    </a>
-                    <a href="#" className="transition-opacity duration-300 hover:opacity-70">
-                      شروط الاستخدام
-                    </a>
+                    <RollLink href="#">سياسة الخصوصية</RollLink>
+                    <RollLink href="#">شروط الاستخدام</RollLink>
                   </div>
+                  {/* The arrow sits outside the clipped label so it stays put
+                      while the words roll past it. */}
                   <button
                     type="button"
                     onClick={scrollToTop}
-                    className="flex cursor-pointer items-center gap-2 text-white transition-opacity duration-300 hover:opacity-70"
+                    className="group/roll flex cursor-pointer items-center gap-2 text-white"
                   >
-                    العودة إلى الأعلى
+                    <RollText>العودة إلى الأعلى</RollText>
                     <ArrowUpIcon className="h-4 w-4" />
                   </button>
                 </div>

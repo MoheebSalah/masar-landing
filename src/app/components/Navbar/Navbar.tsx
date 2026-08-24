@@ -14,22 +14,26 @@ export default function Navbar() {
   const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const lastY = useRef(0);
-  const logoRef = useRef<HTMLAnchorElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
-  const mobileBarRef = useRef<HTMLDivElement>(null);
+  const desktopLogoRef = useRef<HTMLAnchorElement>(null);
+  const mobileLogoRef = useRef<HTMLAnchorElement>(null);
+  const burgerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
 
-      // Shrink as soon as the visitor leaves the very top of the page.
-      setScrolled(y > 10);
+      // Everything keys off the same moment: the point where the hero's opening
+      // headline has lifted away and the scroll-driven footage takes the stage.
+      // Until then the bar sits transparent over the hero's dimmed, blurred
+      // opening frame, so its marks are light like the headline they sit above;
+      // past it, it gets out of the way — the story below is the point.
+      const pastIntro = y > window.innerHeight * 0.4;
+      setScrolled(pastIntro);
 
-      // While the hero (a full viewport tall) is still on screen the navbar
-      // stays put. Once it's scrolled past, hide the navbar when moving down
-      // and slide it back in from the top when moving up.
-      const pastHero = y > window.innerHeight;
-      if (!pastHero) {
+      // Once past that point, hide on the way down and slide back in from the
+      // top on the way up.
+      if (!pastIntro) {
         setHidden(false);
       } else if (y > lastY.current + 4) {
         setHidden(true);
@@ -64,32 +68,37 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
-  // Reveal the logo and links once the loading screen clears — they drop in
-  // from just above their resting spot, the links trailing the logo slightly.
+  // Reveal the bar once the loading screen clears — mark, then links (or the
+  // burger on phones), each dropping in from just above its resting spot.
+  //
+  // Each bar staggers on its own so whichever one is on screen starts at zero:
+  // only one of the two is ever laid out at a time, and a single flat stagger
+  // over both would leave the phone's pair waiting out the desktop pair's turn.
   useEffect(() => {
-    const targets = [
-      logoRef.current,
-      linksRef.current,
-      mobileBarRef.current,
-    ].filter(Boolean);
-    if (targets.length === 0) return;
+    const bars = [
+      [desktopLogoRef.current, linksRef.current].filter(Boolean),
+      [mobileLogoRef.current, burgerRef.current].filter(Boolean),
+    ].filter((bar) => bar.length > 0);
+    if (bars.length === 0) return;
 
-    gsap.set(targets, { autoAlpha: 0, y: -16 });
-    const unsubscribe = onLoaderDone(() => {
-      gsap.to(targets, {
-        autoAlpha: 1,
-        y: 0,
-        duration: 0.7,
-        ease: "power3.out",
-        stagger: 0.12,
+    gsap.set(bars.flat(), { autoAlpha: 0, y: -16 });
+    return onLoaderDone(() => {
+      bars.forEach((bar) => {
+        gsap.to(bar, {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.7,
+          ease: "power3.out",
+          stagger: 0.12,
+        });
       });
     });
-    return unsubscribe;
   }, []);
 
-  // The mobile bar keeps its logo + burger white the whole way down the page — a
-  // black gradient behind them (below) guarantees contrast over any section. The
-  // only exception is when the light dropdown card is open, where they go dark.
+  // The mobile bar's marks are white for the whole page — a black gradient
+  // behind them (below) guarantees contrast over any section, and the hero's
+  // opening is now veiled dark rather than near-white, so it wants white marks
+  // too. The one place they flip dark is the light dropdown card.
   const mobileDark = menuOpen;
 
   return (
@@ -108,13 +117,17 @@ export default function Navbar() {
               : "mt-0 h-24 w-full bg-transparent px-8 md:h-28 md:px-16 lg:px-32"
           }`}
         >
-          {/* Logo — left corner, with the wordmark below it */}
+          {/* Logo — left corner. The bar carries its own mark from the first
+              paint now; the hero's is the opening title's alone and never
+              leaves it, so the two are simply two logos rather than one being
+              handed over. It shrinks with the bar as that collapses into its
+              pill. */}
           <a
-            ref={logoRef}
+            ref={desktopLogoRef}
             href="#"
             aria-label="مسار"
             className={`relative flex items-center transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              scrolled ? "text-on-primary" : "text-white"
+              scrolled ? "text-on-primary" : "text-text-dark"
             }`}
           >
             <Logo
@@ -132,7 +145,6 @@ export default function Navbar() {
               scrolled ? "text-on-primary" : "text-text-dark"
             }`}
           >
-            <NavLink href="#about">من نحن</NavLink>
             <NavLink href="#contact">تواصل معنا</NavLink>
           </div>
         </nav>
@@ -140,25 +152,29 @@ export default function Navbar() {
         {/* Mobile bar — burger (left) + logo (right), transparent with a soft
             black gradient from the top so the white marks stay legible over any
             section behind them. The gradient clears when the light card is open. */}
-        <div
-          ref={mobileBarRef}
-          className="relative flex h-20 w-full items-center justify-between px-6 md:hidden"
-        >
+        <div className="relative flex h-20 w-full items-center justify-between px-6 md:hidden">
           <div
             className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-black/35 via-black/10 to-transparent transition-opacity duration-300 ${
-              menuOpen ? "opacity-0" : "opacity-100"
+              mobileDark ? "opacity-0" : "opacity-100"
             }`}
           />
 
-          <BurgerButton
-            open={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
-            className={`relative z-10 transition-colors duration-300 ${
-              mobileDark ? "text-text" : "text-white"
-            }`}
-          />
+          {/* Wrapped so the loader entrance has its own box to drop in, clear
+              of the gradient behind it — see the reveal effect above. */}
+          <div ref={burgerRef} className="relative z-10">
+            <BurgerButton
+              open={menuOpen}
+              onClick={() => setMenuOpen((v) => !v)}
+              className={`transition-colors duration-300 ${
+                mobileDark ? "text-text" : "text-white"
+              }`}
+            />
+          </div>
 
+          {/* The bar's own mark, at the other end from the burger — the phone's
+              logo slot is the top-right corner. */}
           <a
+            ref={mobileLogoRef}
             href="#"
             aria-label="مسار"
             className={`relative z-10 flex items-center transition-colors duration-300 ${

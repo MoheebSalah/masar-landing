@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import RollLink from "../RollText/RollLink";
 
 type NavLinkProps = {
   href: string;
@@ -6,17 +7,11 @@ type NavLinkProps = {
 };
 
 /**
- * Nav anchor with an underline that draws in from right to left on hover
- * and retracts on leave. The line uses `currentColor`, so it adapts to
- * whatever text colour the navbar is in.
+ * Nav anchor. The hover is the roll — the label lifts out while a copy of it
+ * rises into place from below — which replaces the underline that used to draw
+ * in from the right. Colour is inherited, so it keeps following the bar as it
+ * flips between its light and dark states.
  */
 export default function NavLink({ href, children }: NavLinkProps) {
-  return (
-    <a
-      href={href}
-      className="relative inline-block pb-1 after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-right after:scale-x-0 after:bg-current after:transition-transform after:duration-600 after:ease-in-out hover:after:scale-x-100"
-    >
-      {children}
-    </a>
-  );
+  return <RollLink href={href}>{children}</RollLink>;
 }

@@ -37,6 +37,14 @@ export default function WorkflowCard({
   const textRef = useRef<HTMLDivElement>(null);
   const videoRef = useInViewVideo<HTMLVideoElement>();
   const isVideo = media.endsWith(".mp4");
+  // The clip is preload="none", so nothing downloads until it nears the
+  // viewport — which would leave a bare shadowed box sitting there while it
+  // buffers, right as the card blur-reveals in. The poster holds the clip's own
+  // opening frame in the meantime. Desktop and mobile are the same cut at two
+  // sizes, so both resolve to the single poster file beside them.
+  const poster = isVideo
+    ? media.replace(/(\.mobile)?\.mp4$/, ".poster.webp")
+    : undefined;
 
   useEffect(() => {
     const card = cardRef.current;
@@ -86,6 +94,7 @@ export default function WorkflowCard({
           <video
             ref={videoRef}
             src={media}
+            poster={poster}
             loop
             muted
             playsInline

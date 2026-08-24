@@ -14,19 +14,19 @@ const STEPS = [
     heading: "رصد الأضرار تلقائيًا",
     paragraph:
       "كاميرا واحدة على الطريق تكفي؛ يرصد مسار الحفر والتشققات لحظة مرور المركبة، ويحوّل كل ضرر إلى سجل دقيق مربوط بموقعه على الخريطة دون أي إدخال يدوي.",
-    media: "/assets/Workflow/Workflow%201.mobile.mp4",
+    media: "/assets/Workflow/Workflow%201.v2.mobile.mp4",
   },
   {
     heading: "تصنيف درجة الخطورة",
     paragraph:
       "يقيس النظام حجم الضرر وعمقه وموضعه على المسار، ثم يمنحه درجة خطورة واضحة، فتُرتَّب البلاغات حسب الأولوية بدل أن تتكدّس بلا معيار.",
-    media: "/assets/Workflow/Workflow%202.webp",
+    media: "/assets/Workflow/Workflow%202.v2.webp",
   },
   {
     heading: "خطة إصلاح قابلة للمتابعة",
     paragraph:
       "تتحوّل البلاغات إلى خطة إصلاح منظّمة يمكن متابعتها خطوة بخطوة، مع تتبّع مباشر لحالة كل موقع من الرصد وحتى إغلاق الطلب.",
-    media: "/assets/Workflow/Workflow%203.mobile.mp4",
+    media: "/assets/Workflow/Workflow%203.v2.webp",
   },
 ];
 
@@ -37,7 +37,7 @@ const STEPS = [
 // the odd soft jag, so it reads as a real path rather than a repeating pattern.
 // x is kept within [0.2, 0.58] so the marker and the coordinate label beside it
 // never run off either screen edge; the final point lands ~0.93 so the track
-// ends *behind* the last step's video rather than in the bottom padding.
+// ends *behind* the last step's image rather than in the bottom padding.
 const ROUTE_POINTS: [number, number][] = [
   [0.58, 0.01],
   [0.34, 0.05],
@@ -75,6 +75,12 @@ function MobileStep({
 }) {
   const videoRef = useInViewVideo<HTMLVideoElement>();
   const isVideo = media.endsWith(".mp4");
+  // Same reasoning as the desktop card: preload="none" means the box is empty
+  // until the clip nears the viewport, so the poster holds its opening frame.
+  // Both cuts share the one poster file.
+  const poster = isVideo
+    ? media.replace(/(\.mobile)?\.mp4$/, ".poster.webp")
+    : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -88,6 +94,7 @@ function MobileStep({
           <video
             ref={videoRef}
             src={media}
+            poster={poster}
             loop
             muted
             playsInline

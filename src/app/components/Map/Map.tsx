@@ -78,6 +78,10 @@ export default function Map() {
   // tap-to-fullscreen map, so all the desktop choreography below is gated off.
   const [isMobile, setIsMobile] = useState(false);
 
+  // Whether the map document has been attached yet. See the warming effect
+  // below — this is what `src` hangs off, in place of `loading="lazy"`.
+  const [warm, setWarm] = useState(false);
+
   useIsoLayoutEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
     const update = () => setIsMobile(mq.matches);
@@ -85,6 +89,34 @@ export default function Map() {
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
+
+  // Warm the map rather than deferring it, the way the mobile branch already
+  // does. `loading="lazy"` only starts the fetch once the iframe is nearly on
+  // screen, so the ~1.3 MB document, its parse and MapLibre's WebGL boot all
+  // landed on the main thread exactly as the section arrived — measurably the
+  // jankiest stretch of the page. Attaching the src a screen and a half out
+  // moves that work into the quiet scroll before it: nothing is fetched on page
+  // load, and by the time the stage is on screen the map is already up.
+  //
+  // It also lets the intro land on time. `play()` fires while the frame is
+  // still 20vh below the fold and needs a booted map to post to; cold, that
+  // message missed and the zoom only began on the `masar-ready` replay.
+  useEffect(() => {
+    if (isMobile || warm) return;
+    const section = sectionRef.current;
+    if (!section) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setWarm(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "150% 0px" },
+    );
+    io.observe(section);
+    return () => io.disconnect();
+  }, [isMobile, warm]);
 
   useEffect(() => {
     if (isMobile) return;
@@ -154,11 +186,12 @@ export default function Map() {
     };
     window.addEventListener("message", onMessage);
 
-    // Hold the intro until the whole map window is on screen — fire the moment
-    // the frame's bottom border reaches the bottom of the viewport.
+    // Fire the intro while the map window is still arriving — its bottom edge
+    // still 20vh below the fold — so the zoom-in is already under way by the
+    // time the frame lands, instead of starting only once it's fully on screen.
     const st = ScrollTrigger.create({
       trigger: frame,
-      start: "bottom bottom",
+      start: "bottom 120%",
       onEnter: play,
       onEnterBack: play,
     });
@@ -190,7 +223,7 @@ export default function Map() {
       gsap.set(frame, { autoAlpha: 0, y: 60, scale: 0.94 });
 
       const top = gsap.timeline({
-        scrollTrigger: { trigger: section, start: "top 72%", once: true },
+        scrollTrigger: { trigger: section, start: "top 85%", once: true },
       });
       top
         .to(headingEls, {
@@ -208,7 +241,7 @@ export default function Map() {
         scale: 1,
         duration: 0.9,
         ease: "power3.out",
-        scrollTrigger: { trigger: stage, start: "top 82%", once: true },
+        scrollTrigger: { trigger: stage, start: "top 92%", once: true },
       });
     }, section);
 
@@ -313,7 +346,7 @@ export default function Map() {
       {/* Stage: holds the centred device; the desktop stand overflows below. */}
       <div
         ref={stageRef}
-        className="relative flex h-[84vh] w-full items-center justify-center"
+        className="relative flex h-[84svh] w-full items-center justify-center"
       >
         {/* Device body — GSAP drives its width, height and corner radius. */}
         <div
@@ -327,13 +360,14 @@ export default function Map() {
             className="relative h-full w-full overflow-hidden bg-background"
           >
             {/* The map document carries its own inlined MapLibre build (~1.3 MB),
-                so it stays lazy — it only fetches once this section nears the
-                viewport instead of competing with the sections above it. */}
+                so it never loads with the page — the `warm` effect above
+                attaches the src once this section is a screen and a half out.
+                The element itself always renders, so the refs and the sizing
+                pass above hold whether or not the document is attached yet. */}
             <iframe
               ref={iframeRef}
-              src="/masar-map.html"
+              src={warm ? "/masar-map.html" : undefined}
               title="خريطة مسار للحُفر في الخليل"
-              loading="lazy"
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 border-0"
             />
           </div>

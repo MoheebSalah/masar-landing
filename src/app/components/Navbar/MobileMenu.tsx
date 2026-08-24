@@ -19,7 +19,6 @@ type MobileMenuProps = {
  */
 export default function MobileMenu({ open, onClose }: MobileMenuProps) {
   const links = [
-    { href: "#about", label: "من نحن" },
     { href: "#contact", label: "تواصل معنا" },
   ];
 
