@@ -152,10 +152,15 @@ export default function Statement() {
         <Blueprint />
 
         {/* Sets up the line the Solution section answers with — "مسار يغلق هذه
-            الفجوة". Each word is its own span so the reveal can stagger them. */}
+            الفجوة". Each word is its own span so the reveal can stagger them.
+            The size is one fluid rule instead of breakpoint steps because the
+            line has to land in exactly two: the longer row measures 11.16× the
+            font size (its four words plus three `0.3em` gaps), and the panel
+            gives it `100vw − 4rem`, so anything above ~6.9vw wraps it to three.
+            The `5.5rem` cap takes over from ~1275px up, where there is room. */}
         <h2
           ref={headingRef}
-          className="relative z-10 max-w-6xl text-center font-heading text-[2.5rem] leading-tight text-text md:text-[4.5rem] lg:text-[5.5rem]"
+          className="relative z-10 max-w-6xl text-center font-heading text-[min(6.9vw,5.5rem)] leading-tight text-text"
         >
           <span className="flex flex-wrap justify-center gap-x-[0.3em]">
             <span>بين</span>

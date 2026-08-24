@@ -73,10 +73,17 @@ export default function SceneCaption({
         data-mobile-to={mobileTo}
         className="relative"
       >
-        {/* A wrapping flex row so every word is its own box and the gap keeps
-            the spacing even — an inline-block run would swallow the whitespace
-            between the spans. */}
-        <h2 className="relative flex flex-wrap gap-x-[0.28em] font-heading text-h2 leading-tight text-text-dark max-md:text-t1">
+        {/* A single-line flex row so every word is its own box and the gap
+            keeps the spacing even — an inline-block run would swallow the
+            whitespace between the spans. `flex-nowrap` + `w-max` are what hold
+            every title to one line: the row sizes to its own content and
+            ignores the slot width `position` sets, which still governs the
+            paragraph below. The desktop size is capped by `3.7vw` rather than
+            fixed at the h2 40px because the longest title sits in a slot
+            anchored `right-1/2` — at 768px that leaves it half the viewport,
+            and a flat 40px would run it off the left edge. From ~1080px up the
+            `2.5rem` cap wins and it reads at the h2 size. */}
+        <h2 className="relative flex w-max flex-nowrap gap-x-[0.28em] font-heading text-[min(2.5rem,3.7vw)] leading-tight text-text-dark max-md:text-t1">
           {title.split(" ").map((word, i) => (
             <span key={`${word}-${i}`} data-scene-word>
               {word}

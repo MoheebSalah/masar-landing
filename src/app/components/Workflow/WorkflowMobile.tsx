@@ -75,6 +75,12 @@ function MobileStep({
 }) {
   const videoRef = useInViewVideo<HTMLVideoElement>();
   const isVideo = media.endsWith(".mp4");
+  // Same reasoning as the desktop card: preload="none" means the box is empty
+  // until the clip nears the viewport, so the poster holds its opening frame.
+  // Both cuts share the one poster file.
+  const poster = isVideo
+    ? media.replace(/(\.mobile)?\.mp4$/, ".poster.webp")
+    : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -88,6 +94,7 @@ function MobileStep({
           <video
             ref={videoRef}
             src={media}
+            poster={poster}
             loop
             muted
             playsInline

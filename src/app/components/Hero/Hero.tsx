@@ -542,7 +542,7 @@ export default function Hero() {
         {/* The story itself: AVIF stills at 20fps rather than a video, so
             moving through it is a decode and never a seek. `[n]` stands in for
             the zero-padded frame number. The two cuts are separate edits —
-            567 landscape frames for desktop, 297 portrait ones for phones — so
+            567 landscape frames for desktop, 273 portrait ones for phones — so
             each carries its own count.
 
             The poster underneath shows frame one until the canvas has anything
@@ -602,7 +602,7 @@ export default function Hero() {
             <div ref={introRef}>
               <h1
                 ref={headingRef}
-                className="font-heading font-semibold text-[3rem] leading-[1.12] text-text-dark sm:text-[3.5rem] md:text-[5rem] lg:text-[6.25rem]"
+                className="font-heading font-semibold text-[clamp(1.2rem,7.4vw,5.5rem)] leading-[1.12] text-text-dark"
               >
                 <span className="block">
                   سجّل طريقك، ودع <span className="text-primary">مسار</span>
