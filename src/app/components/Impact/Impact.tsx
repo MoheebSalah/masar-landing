@@ -169,14 +169,14 @@ export default function Impact() {
       id="impact"
       /* A scroll track with a sticky, full-screen panel inside it: the panel
          holds the capsule still while the scrolled distance turns the drum.
-         Desktop h-[520vh] == 1.3 viewports of scroll per stat (STATS has 4);
+         Desktop h-[520svh] == 1.3 viewports of scroll per stat (STATS has 4);
          phones get a shorter track, since a thumb covers less ground than a
          wheel and 1.3 screens per number would be a long haul. */
-      className="relative h-[520vh] w-full bg-primary max-md:h-[400vh]"
+      className="relative h-[520svh] w-full bg-primary max-md:h-[400svh]"
     >
       {/* translateZ promotes the pinned panel to its own layer on phones, so the
           giant sticky number no longer shimmers against Lenis' sub-pixel scroll. */}
-      <div className="sticky top-0 flex h-screen flex-col items-center justify-center max-md:h-dvh max-md:[transform:translateZ(0)]">
+      <div className="sticky top-0 flex h-svh flex-col items-center justify-center max-md:[transform:translateZ(0)]">
         {/* Content column matches the showcase width; the whole stat — eyebrow,
             capsule, title — is stacked on its centre line. */}
         <div className="flex w-full max-w-375 flex-col items-center px-8 max-md:px-5">

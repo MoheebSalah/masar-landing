@@ -346,7 +346,7 @@ export default function Map() {
       {/* Stage: holds the centred device; the desktop stand overflows below. */}
       <div
         ref={stageRef}
-        className="relative flex h-[84vh] w-full items-center justify-center"
+        className="relative flex h-[84svh] w-full items-center justify-center"
       >
         {/* Device body — GSAP drives its width, height and corner radius. */}
         <div

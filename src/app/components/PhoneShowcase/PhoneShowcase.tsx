@@ -587,7 +587,7 @@ export default function PhoneShowcase() {
       ref={sectionRef}
       id="app-preview"
       data-mode={mode}
-      className="w-full overflow-hidden bg-(--sec-bg) px-8 py-32 max-md:flex max-md:h-dvh max-md:flex-col max-md:justify-center max-md:gap-2 max-md:py-6"
+      className="w-full overflow-hidden bg-(--sec-bg) px-8 py-32 max-md:flex max-md:h-svh max-md:flex-col max-md:justify-center max-md:gap-2 max-md:py-6"
     >
       {/* Section heading */}
       <div ref={headingRef} className="mx-auto max-w-3xl text-center">

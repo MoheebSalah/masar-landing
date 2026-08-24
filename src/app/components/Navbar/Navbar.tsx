@@ -7,20 +7,16 @@ import NavLink from "./NavLink";
 import BurgerButton from "./BurgerButton";
 import MobileMenu from "./MobileMenu";
 import { onLoaderDone } from "../Loader/loaderSignal";
-import { onHeroLogoLanded } from "../Hero/heroLogoSignal";
 import { getLenis } from "../SmoothScroll/lenisInstance";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  // The bar opens the page without a mark of its own: the hero's is flying up
-  // to this slot, and shows up here only once it has arrived. Until then the
-  // slot is invisible but still laid out, which is what lets the hero measure
-  // where it is aiming.
-  const [markLanded, setMarkLanded] = useState(false);
   const lastY = useRef(0);
   const linksRef = useRef<HTMLDivElement>(null);
+  const desktopLogoRef = useRef<HTMLAnchorElement>(null);
+  const mobileLogoRef = useRef<HTMLAnchorElement>(null);
   const burgerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,32 +68,31 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
-  useEffect(() => onHeroLogoLanded(setMarkLanded), []);
-
-  // Reveal the links and the burger once the loading screen clears — they drop
-  // in from just above their resting spot.
+  // Reveal the bar once the loading screen clears — mark, then links (or the
+  // burger on phones), each dropping in from just above its resting spot.
   //
-  // Neither logo slot is in here, and on phones that is why the burger is
-  // animated rather than the bar around it. The slots have no entrance of their
-  // own any more — their entrance is the hero's mark arriving — and, more to the
-  // point, the hero measures them to know where to aim. Anything that moves a
-  // slot after the measurement lands the mark beside it rather than on it, so
-  // nothing here is allowed to transform an ancestor of one.
+  // Each bar staggers on its own so whichever one is on screen starts at zero:
+  // only one of the two is ever laid out at a time, and a single flat stagger
+  // over both would leave the phone's pair waiting out the desktop pair's turn.
   useEffect(() => {
-    const targets = [linksRef.current, burgerRef.current].filter(Boolean);
-    if (targets.length === 0) return;
+    const bars = [
+      [desktopLogoRef.current, linksRef.current].filter(Boolean),
+      [mobileLogoRef.current, burgerRef.current].filter(Boolean),
+    ].filter((bar) => bar.length > 0);
+    if (bars.length === 0) return;
 
-    gsap.set(targets, { autoAlpha: 0, y: -16 });
-    const unsubscribe = onLoaderDone(() => {
-      gsap.to(targets, {
-        autoAlpha: 1,
-        y: 0,
-        duration: 0.7,
-        ease: "power3.out",
-        stagger: 0.12,
+    gsap.set(bars.flat(), { autoAlpha: 0, y: -16 });
+    return onLoaderDone(() => {
+      bars.forEach((bar) => {
+        gsap.to(bar, {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.7,
+          ease: "power3.out",
+          stagger: 0.12,
+        });
       });
     });
-    return unsubscribe;
   }, []);
 
   // The mobile bar's marks are white for the whole page — a black gradient
@@ -122,22 +117,18 @@ export default function Navbar() {
               : "mt-0 h-24 w-full bg-transparent px-8 md:h-28 md:px-16 lg:px-32"
           }`}
         >
-          {/* Logo — left corner. The hero measures this box to know where to
-              fly its own mark, so it is always laid out; `opacity` and not a
-              conditional render or `hidden` is what keeps it out of sight until
-              that mark lands. No opacity transition on purpose: the arriving
-              mark is at this spot, this size and this colour on the frame it
-              hands over, so an instant swap is the invisible one — a fade would
-              dip through a half-there logo. */}
+          {/* Logo — left corner. The bar carries its own mark from the first
+              paint now; the hero's is the opening title's alone and never
+              leaves it, so the two are simply two logos rather than one being
+              handed over. It shrinks with the bar as that collapses into its
+              pill. */}
           <a
-            data-navbar-logo="desktop"
+            ref={desktopLogoRef}
             href="#"
             aria-label="مسار"
-            aria-hidden={!markLanded}
-            tabIndex={markLanded ? undefined : -1}
             className={`relative flex items-center transition-colors duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              markLanded ? "opacity-100" : "opacity-0"
-            } ${scrolled ? "text-on-primary" : "text-text-dark"}`}
+              scrolled ? "text-on-primary" : "text-text-dark"
+            }`}
           >
             <Logo
               className={`w-auto transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${
@@ -154,7 +145,6 @@ export default function Navbar() {
               scrolled ? "text-on-primary" : "text-text-dark"
             }`}
           >
-            <NavLink href="#about">من نحن</NavLink>
             <NavLink href="#contact">تواصل معنا</NavLink>
           </div>
         </nav>
@@ -169,9 +159,8 @@ export default function Navbar() {
             }`}
           />
 
-          {/* Wrapped so the loader entrance has something to drop in that is
-              not an ancestor of the logo slot beside it — see the reveal
-              effect above. */}
+          {/* Wrapped so the loader entrance has its own box to drop in, clear
+              of the gradient behind it — see the reveal effect above. */}
           <div ref={burgerRef} className="relative z-10">
             <BurgerButton
               open={menuOpen}
@@ -182,18 +171,15 @@ export default function Navbar() {
             />
           </div>
 
-          {/* Same handover as the desktop slot, at the other end of the bar —
-              on phones the hero's mark flies to the top-right corner, because
-              this is where the measured target happens to be. */}
+          {/* The bar's own mark, at the other end from the burger — the phone's
+              logo slot is the top-right corner. */}
           <a
-            data-navbar-logo="mobile"
+            ref={mobileLogoRef}
             href="#"
             aria-label="مسار"
-            aria-hidden={!markLanded}
-            tabIndex={markLanded ? undefined : -1}
             className={`relative z-10 flex items-center transition-colors duration-300 ${
-              markLanded ? "opacity-100" : "opacity-0"
-            } ${mobileDark ? "text-text" : "text-white"}`}
+              mobileDark ? "text-text" : "text-white"
+            }`}
           >
             <Logo className="h-11 w-auto" />
           </a>

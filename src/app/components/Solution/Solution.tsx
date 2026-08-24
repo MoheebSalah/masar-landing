@@ -280,7 +280,7 @@ export default function Solution() {
       ref={sectionRef}
       id="solution"
       data-dark="false"
-      className="group relative z-20 mt-[-100vh] h-screen w-full overflow-hidden"
+      className="group relative z-20 mt-[-100svh] h-svh w-full overflow-hidden"
     >
       {/* The dark backdrop, faded in at the flip point. Fading a layer's
           opacity is composited on the GPU, so the swap costs no repaint of the
@@ -320,7 +320,7 @@ export default function Solution() {
           </span>
           <span ref={leftSlideRef} className="inline-block">
             <span ref={leftRef} className="inline-block whitespace-nowrap">
-              هذه الفجوة
+              هذه الحفرة
             </span>
           </span>
         </div>

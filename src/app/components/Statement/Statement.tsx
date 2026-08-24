@@ -27,7 +27,7 @@ export default function Statement() {
       const words = heading.querySelectorAll("span span");
 
       // The panel is measured rather than read off window.innerHeight: it is
-      // `h-screen`, and on a phone whose URL bar is showing those two disagree
+      // `h-svh`, and on a phone whose URL bar is showing those two disagree
       // — the same reason the hero measures its stage. One screen of scroll is
       // the unit every phase below is counted in.
       const screen = () => panel.offsetHeight;
@@ -100,7 +100,7 @@ export default function Statement() {
       // the words dissolve on the spot, over the one screen of scroll that
       // Solution spends climbing into the viewport from below. The two are cut
       // from the same geometry — Solution is pulled up by exactly one screen
-      // (`mt-[-100vh]`), so it leaves the bottom edge as this fade starts and
+      // (`mt-[-100svh]`), so it leaves the bottom edge as this fade starts and
       // lands filling the screen, its frame centred, as the fade finishes.
       //
       // The heading fades and not the panel: the panel's background is the
@@ -123,7 +123,7 @@ export default function Statement() {
   }, []);
 
   return (
-    // Three and a half screens, the first two overlapping the hero (-200vh).
+    // Three and a half screens, the first two overlapping the hero (-200svh).
     // They divide as fade-in / hold / fade-out / handover: one screen stuck to
     // the top fading up over the footage's last frame, half a screen of
     // stillness so the line can be read, one screen dissolving that line away
@@ -141,23 +141,26 @@ export default function Statement() {
     <section
       id="statement"
       ref={sectionRef}
-      className="relative z-10 mt-[-200vh] h-[350vh] w-full"
+      className="relative z-10 mt-[-200svh] h-[350svh] w-full"
     >
       <div
         ref={panelRef}
-        className="sticky top-0 flex h-screen w-full flex-col items-center justify-center bg-background px-8"
+        className="sticky top-0 flex h-svh w-full flex-col items-center justify-center bg-background px-8"
       >
         {/* Construction line art, behind the line of text — and behind
             everything the section after this one brings with it */}
         <Blueprint />
 
         {/* Sets up the line the Solution section answers with — "مسار يغلق هذه
-            الفجوة". Each word is its own span so the reveal can stagger them.
+            الحفرة". Each word is its own span so the reveal can stagger them.
             The size is one fluid rule instead of breakpoint steps because the
             line has to land in exactly two: the longer row measures 11.16× the
             font size (its four words plus three `0.3em` gaps), and the panel
             gives it `100vw − 4rem`, so anything above ~6.9vw wraps it to three.
-            The `5.5rem` cap takes over from ~1275px up, where there is room. */}
+            The `5.5rem` cap takes over from ~1275px up, where there is room.
+            The second row is the shorter of the two, so it is the first that
+            fixes the size — leave that row at four words if it is ever
+            rewritten. */}
         <h2
           ref={headingRef}
           className="relative z-10 max-w-6xl text-center font-heading text-[min(6.9vw,5.5rem)] leading-tight text-text"
@@ -169,8 +172,8 @@ export default function Statement() {
             <span>وإصلاحها</span>
           </span>
           <span className="flex flex-wrap justify-center gap-x-[0.3em]">
-            <span>فجوةٌ</span>
-            <span>طويلة.</span>
+            <span>خطرٌ</span>
+            <span>يتراكم.</span>
           </span>
         </h2>
       </div>

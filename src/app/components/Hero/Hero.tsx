@@ -5,7 +5,6 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { onLoaderDone } from "../Loader/loaderSignal";
 import { signalHeroFootageReady } from "./heroFootageSignal";
-import { setHeroLogoLanded } from "./heroLogoSignal";
 import FrameSequence from "./FrameSequence";
 import SceneCaption from "./SceneCaption";
 import Logo from "../Logo/Logo";
@@ -41,15 +40,6 @@ const READY_FRACTION = 0.14;
 const INTRO = 3;
 const MOBILE_INTRO = 2;
 
-// How much scroll the mark's flight into the navbar takes, as a share of one
-// screen. It is deliberately short of the navbar's own threshold (0.4 of a
-// screen, where the bar collapses into its centred pill): the mark has to be
-// delivered while the slot it is aiming at is still the wide opening one, or it
-// would spend the last of the flight chasing a target that had moved. The gap
-// between the two also gives the landing a moment to read before the bar starts
-// morphing around it.
-const LOGO_FLIGHT = 0.35;
-
 // How long a caption takes to arrive and to leave, again in footage seconds.
 // The phone cut's scenes run half as long, so its captions have to move in and
 // out in half the footage-time to leave the same share of each scene sitting
@@ -66,7 +56,6 @@ export default function Hero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sequenceRef = useRef<FrameSequence | null>(null);
   const introRef = useRef<HTMLDivElement>(null);
-  const markRef = useRef<HTMLDivElement>(null);
   const markRevealRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const veilRef = useRef<HTMLDivElement>(null);
@@ -319,137 +308,6 @@ export default function Hero() {
         );
       }
 
-      // The mark's flight. It opens the page in the middle of the hero, above
-      // the headline, and rather than lifting away with it, it travels up into
-      // the navbar's logo slot and stays there — so the mark the visitor met on
-      // arrival is the same one that sits in the bar for the rest of the page.
-      //
-      // Measured rather than placed. The target is the navbar's own logo, which
-      // is in the document from the first paint (kept invisible until this
-      // lands, precisely so there is something to measure), so the landing spot
-      // is whatever that bar's responsive padding and mark size work out to at
-      // this width — and phones, where the slot is the top-right corner rather
-      // than the top-left, need no separate case at all.
-      const mark = markRef.current;
-      const slot = document.querySelector<HTMLElement>(
-        phone ? '[data-navbar-logo="mobile"]' : '[data-navbar-logo="desktop"]'
-      );
-
-      if (mark && slot) {
-        let flying: gsap.core.Timeline | null = null;
-        const flight = { dx: 0, dy: 0, scale: 1 };
-
-        // Set when a reading had to be refused because the bar could not be
-        // trusted at the time; the next time the visitor is back at the very
-        // top — where it can be — the numbers are taken again.
-        let stale = false;
-
-        const measure = () => {
-          // Only ever read the slot while the bar is still wearing its opening
-          // shape. Past the flight's range it has collapsed into the centred
-          // pill, and a refresh down there — a resize, say — would record the
-          // pill as the target and fly the mark into the middle of the screen
-          // on the way back up.
-          //
-          // The boundary itself is refused too, and it has to be: the bar swaps
-          // its shape back from a React state change on the same scroll event
-          // that would trigger the reading, and there is no ordering guarantee
-          // between that render and this callback — deferring a frame is not
-          // enough, because a default-priority React update can land after the
-          // next animation frame. So the only readings taken are ones where the
-          // answer cannot be in doubt.
-          if (window.scrollY > window.innerHeight * LOGO_FLIGHT) {
-            stale = true;
-            return;
-          }
-          stale = false;
-
-          // Cleared first, so the "from" box is the mark's resting place rather
-          // than wherever the flight has currently put it.
-          gsap.set(mark, { x: 0, y: 0, scale: 1 });
-          const from = mark.getBoundingClientRect();
-          const to = slot.getBoundingClientRect();
-
-          // Centres, not corners: GSAP scales about the centre, so lining those
-          // two up is what makes the landed mark and the bar's own mark the
-          // same mark.
-          flight.dx = to.left + to.width / 2 - (from.left + from.width / 2);
-          flight.dy = to.top + to.height / 2 - (from.top + from.height / 2);
-          flight.scale = to.height / from.height;
-
-          // Invalidating makes the tween re-read the numbers above, but it does
-          // not repaint on its own, and the reset above has just put the mark
-          // back at its resting spot. It has to be replayed, or the mark sits
-          // at home until the next scroll event moves it — which, if the
-          // visitor has stopped, is never. Handing `progress` the value it
-          // already holds is a no-op, hence the nudge through zero.
-          if (flying) {
-            const progress = flying.progress();
-            flying.invalidate().progress(0).progress(progress);
-          }
-        };
-
-        // The swap. Once the mark is home the navbar shows its own — same spot,
-        // same size, same colour — and this copy steps out, so the bar is free
-        // to hide and morph on scroll without dragging a second mark around
-        // with it. Latched, because it is called on every scroll frame.
-        let landed = false;
-        const handover = (value: boolean) => {
-          if (value === landed) return;
-          landed = value;
-          gsap.set(mark, { autoAlpha: value ? 0 : 1 });
-          setHeroLogoLanded(value);
-        };
-
-        flying = gsap.timeline({
-          scrollTrigger: {
-            trigger: section,
-            start: "top top",
-            end: () => `+=${window.innerHeight * LOGO_FLIGHT}`,
-            // Unsmoothed, unlike the footage scrub above. The handover happens
-            // on a scroll position, and a mark lagging six tenths of a second
-            // behind it would arrive after the bar had already shown its own.
-            scrub: true,
-            invalidateOnRefresh: true,
-            onRefreshInit: measure,
-            onUpdate: (self) => {
-              handover(self.progress >= 1);
-              // Back at the very top with a reading owed. Here the bar is
-              // unambiguously the wide one and the mark is already home, so
-              // taking it costs nothing and shows nothing.
-              if (stale && self.progress === 0) measure();
-            },
-            onRefresh: (self) => handover(self.progress >= 1),
-          },
-        });
-
-        flying.to(
-          mark,
-          {
-            x: () => flight.dx,
-            y: () => flight.dy,
-            scale: () => flight.scale,
-            ease: "none",
-            duration: 1,
-          },
-          0
-        );
-
-        // Primary the whole way up, and the bar's own mark colour only as it
-        // arrives — the mark reads as itself in flight, and as part of the
-        // navbar once it is there. Both ends stated rather than inherited from
-        // the class, so a refresh mid-flight can't record a half-changed colour
-        // as the starting one.
-        flying.fromTo(
-          mark,
-          { color: "#34A8D8" },
-          { color: "#F7F8F7", ease: "none", duration: 0.2 },
-          0.8
-        );
-
-        measure();
-      }
-
       // The handover. With the footage on its last frame the stage still has
       // one screen of sticky scroll in it, and that screen is spent dissolving
       // the picture away where it stands while the statement panel — laid over
@@ -503,7 +361,8 @@ export default function Hero() {
     if (!heading) return;
 
     // The mark leads, the two lines follow it — one stagger over the lot. The
-    // mark's *inner* box, because the outer one is the flight's to write.
+    // mark's own box, not the wrapper around it — that one is the scrubbed
+    // timeline's to write when the whole title lifts away.
     const reveal = [markRevealRef.current, ...heading.children].filter(Boolean);
     gsap.set(reveal, { autoAlpha: 0, y: 40 });
     return onLoaderDone(() => {
@@ -533,12 +392,29 @@ export default function Hero() {
     // than restating them.
     <section
       ref={sectionRef}
-      className="relative h-[860vh] max-md:h-[600vh]"
+      className="relative h-[860svh] max-md:h-[600svh]"
     >
-      {/* Stage height is 100vh on every screen, not dvh: the statement card
-          pulls itself up by exactly this much, and a dvh stage would drift out
-          of step with it every time a phone's URL bar slid away. */}
-      <div ref={stageRef} className="sticky top-0 h-screen w-full overflow-hidden">
+      {/* `svh`, and every full-height box and negative margin on the page is
+          the same unit — see the section height above and the statement's
+          `mt-[-200svh]`.
+
+          Not `dvh`: the statement pulls itself up by exactly this much, and a
+          dvh stage would drift out of step with it every time a phone's URL bar
+          slid away. Not `vh`/`h-screen` either, which is what this was: `vh`
+          resolves to the *large* viewport — the height you only get once that
+          URL bar has retracted — so with the bar showing the bottom ~12% of the
+          stage sat under it. On phones that is the worst possible slice to
+          lose, because the portrait cut is fitted to the bottom edge: the
+          dashboard, the HUD readout and the progress lap's bottom hairline all
+          live down there. `svh` is the small viewport, so nothing is ever
+          under the chrome, and unlike dvh it is a fixed number that does not
+          move when the bar does.
+
+          The trade is a strip of background below the stage while the bar is
+          retracted; `max-md:bg-[#f9fbfa]` is the canvas' own fill colour, so on
+          phones that strip reads as more of the letterbox the fitted cut
+          already has above it rather than as a seam. */}
+      <div ref={stageRef} className="sticky top-0 h-svh w-full overflow-hidden max-md:bg-[#f9fbfa]">
         {/* The story itself: AVIF stills at 20fps rather than a video, so
             moving through it is a decode and never a seek. `[n]` stands in for
             the zero-padded frame number. The two cuts are separate edits —
@@ -583,23 +459,24 @@ export default function Hero() {
         {/* Opening headline — centred and light, over the veiled frame */}
         <div className="absolute inset-0 z-20 flex items-center justify-center px-6 text-center">
           <div className="max-w-5xl">
-            {/* The mark above the headline, in primary — it carries over the
-                darkened frame where the navbar's dark version would not.
-
-                It stays in flow, so the column below it sits exactly where it
-                did and its own resting box is measurable at any time, but it is
-                deliberately *not* inside the wrapper the intro tween lifts
-                away: it does not leave with the headline, it flies to the
-                navbar. Three nested elements because three animations want the
-                same mark and none of them may share a transform — the flight
-                drives this box, the loader reveal drives the one inside it, and
-                the hover animation in globals.css drives the paths. */}
-            <div ref={markRef} className="mx-auto mb-6 w-fit text-primary md:mb-8">
-              <div ref={markRevealRef}>
-                <Logo className="h-16 w-auto md:h-24" />
-              </div>
-            </div>
             <div ref={introRef}>
+              {/* The mark above the headline, in primary — it carries over the
+                  darkened frame where the navbar's dark version would not.
+
+                  It sits inside the wrapper the intro tween lifts away, so it
+                  leaves with the headline the moment scrolling starts: the
+                  navbar carries its own mark from the first paint, and this one
+                  belongs to the opening title alone. Its own box stays separate
+                  from that wrapper's all the same — the loader reveal writes
+                  here, the intro tween writes to the parent, and the hover
+                  animation in globals.css drives the paths — because none of
+                  the three may share a transform.
+
+                  Larger than the bar's mark on purpose: it is the title's own
+                  mark now, not a copy of the navbar's in transit. */}
+              <div ref={markRevealRef} className="mx-auto mb-6 w-fit text-primary md:mb-8">
+                <Logo className="h-24 w-auto md:h-36" />
+              </div>
               <h1
                 ref={headingRef}
                 className="font-heading font-semibold text-[clamp(1.2rem,7.4vw,5.5rem)] leading-[1.12] text-text-dark"
